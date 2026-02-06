@@ -1,7 +1,9 @@
 <Solution>
+  <Project Path="Altinn.Authorization.Api.Contracts/Altinn.Authorization.Api.Contracts.csproj" />
   <Project Path="altinnaccessmanager.client/altinnaccessmanager.client.esproj">
     <Build />
     <Deploy />
   </Project>
   <Project Path="AltinnAccessManager.Server/AltinnAccessManager.Server.csproj" />
+  <Project Path="ClassLibrary1/ClassLibrary1.csproj" Id="3c0d7693-50b9-4aab-8474-92eb89774ce1" />
 </Solution>
