@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="altinnaccessmanager.client/altinnaccessmanager.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="AltinnAccessManager.Server/AltinnAccessManager.Server.csproj" />
+</Solution>
