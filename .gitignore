@@ -4,3 +4,7 @@
 
 /src/AltinnAccessManager/.vs
 /src/AltinnAccessManager/AltinnAccessManager.Server/obj
+/src/AltinnAccessManager/Altinn.Authorization.Api.Contracts/bin/Debug/net10.0
+/src/AltinnAccessManager/Altinn.Authorization.Api.Contracts/obj
+/src/AltinnAccessManager/AltinnAccessManager.Server/bin/Debug/net10.0
+/src/AltinnAccessManager/ClassLibrary1/obj/Debug/net10.0
