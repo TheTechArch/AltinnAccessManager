@@ -9,3 +9,5 @@
 /src/AltinnAccessManager/AltinnAccessManager.Server/bin/Debug/net10.0
 /src/AltinnAccessManager/ClassLibrary1/obj/Debug/net10.0
 /src/AltinnAccessManager/altinnaccessmanager.client/obj/Debug
+/src/AltinnAccessManager/AltinnAccessManager.Server/bin/Release/net10.0
+/src/AltinnAccessManager/altinnaccessmanager.client/obj/Release
