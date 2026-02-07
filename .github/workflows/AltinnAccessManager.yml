@@ -8,10 +8,10 @@ permissions:
   contents: read
 env:
   AZURE_WEBAPP_NAME: AltinnAccessManager
-  AZURE_WEBAPP_PACKAGE_PATH: AltinnAccessManager.Server\publish
+  AZURE_WEBAPP_PACKAGE_PATH: src/AltinnAccessManager/AltinnAccessManager.Server/publish
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 10.0.x
-  WORKING_DIRECTORY: AltinnAccessManager.Server
+  WORKING_DIRECTORY: src/AltinnAccessManager/AltinnAccessManager.Server
 jobs:
   build:
     runs-on: windows-latest
