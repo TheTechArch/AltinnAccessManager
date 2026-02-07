@@ -1,3 +1,6 @@
+using AltinnAccessManager.Server.Configuration;
+using AltinnAccessManager.Server.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Configure ID-porten settings
+builder.Services.Configure<IdPortenSettings>(builder.Configuration.GetSection("IdPorten"));
+
+// Register ID-porten service with HttpClient
+builder.Services.AddHttpClient<IIdPortenService, IdPortenService>();
 
 var app = builder.Build();
 

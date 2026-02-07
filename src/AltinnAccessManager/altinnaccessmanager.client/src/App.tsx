@@ -1,6 +1,51 @@
 import { Button, Card, Heading, Paragraph, Tag } from '@digdir/designsystemet-react'
+import { useState, useEffect } from 'react'
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check authentication status on component mount
+    checkAuthStatus();
+    
+    // Check for login/logout query params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('login') === 'success') {
+      setIsAuthenticated(true);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (urlParams.get('logout') === 'success') {
+      setIsAuthenticated(false);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (urlParams.get('error')) {
+      console.error('Authentication error:', urlParams.get('error'), urlParams.get('error_description'));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/authentication/status');
+      const data = await response.json();
+      setIsAuthenticated(data.isAuthenticated);
+    } catch (error) {
+      console.error('Failed to check auth status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = () => {
+    window.location.href = '/api/authentication/login';
+  };
+
+  const handleLogout = () => {
+    window.location.href = '/api/authentication/logout';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50" data-color-scheme="light">
       {/* Header */}
@@ -17,6 +62,17 @@ function App() {
             <a href="#features" className="hover:text-gray-300 transition-colors">Features</a>
             <a href="#api" className="hover:text-gray-300 transition-colors">API Reference</a>
             <a href="#docs" className="hover:text-gray-300 transition-colors">Documentation</a>
+            {!isLoading && (
+              isAuthenticated ? (
+                <Button variant="secondary" data-size="sm" onClick={handleLogout}>
+                  Logg ut
+                </Button>
+              ) : (
+                <Button data-size="sm" onClick={handleLogin}>
+                  Logg inn med ID-porten
+                </Button>
+              )
+            )}
           </nav>
         </div>
       </header>
@@ -33,12 +89,25 @@ function App() {
             Manage roles, delegations, consents, and system users with ease.
           </Paragraph>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button data-size="lg">
-              Get Started
-            </Button>
-            <Button variant="secondary" data-size="lg">
-              View API Docs
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Button data-size="lg">
+                  Go to Dashboard
+                </Button>
+                <Button variant="secondary" data-size="lg" onClick={handleLogout}>
+                  Logg ut
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button data-size="lg" onClick={handleLogin}>
+                  Logg inn med ID-porten
+                </Button>
+                <Button variant="secondary" data-size="lg">
+                  View API Docs
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
