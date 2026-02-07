@@ -7,6 +7,13 @@
     <SpaRoot>..\altinnaccessmanager.client</SpaRoot>
     <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
     <SpaProxyServerUrl>https://localhost:55327</SpaProxyServerUrl>
+    <!-- Define available configurations -->
+    <Configurations>Debug;Release;CompiledSPA</Configurations>
+  </PropertyGroup>
+
+  <!-- Auto-enable BuildSpa for CompiledSPA configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'CompiledSPA'">
+    <BuildSpa>true</BuildSpa>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,5 +28,17 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>
+
+  <!-- Build SPA and copy to wwwroot when BuildSpa=true -->
+  <Target Name="BuildAndCopySpa" BeforeTargets="Build" Condition="'$(BuildSpa)' == 'true'">
+    <Message Importance="high" Text="Building React SPA..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+    <ItemGroup>
+      <SpaDistFiles Include="$(SpaRoot)\dist\**\*.*" />
+    </ItemGroup>
+    <Message Importance="high" Text="Copying SPA files to wwwroot..." />
+    <Copy SourceFiles="@(SpaDistFiles)" DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\%(RecursiveDir)" />
+  </Target>
 
 </Project>

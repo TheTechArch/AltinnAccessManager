@@ -1,4 +1,10 @@
 <Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="CompiledSPA" />
+  </Configurations>
   <Project Path="Altinn.Authorization.Api.Contracts/Altinn.Authorization.Api.Contracts.csproj" />
   <Project Path="altinnaccessmanager.client/altinnaccessmanager.client.esproj">
     <Build />
