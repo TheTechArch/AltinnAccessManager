@@ -11,3 +11,5 @@
 /src/AltinnAccessManager/altinnaccessmanager.client/obj/Debug
 /src/AltinnAccessManager/AltinnAccessManager.Server/bin/Release/net10.0
 /src/AltinnAccessManager/altinnaccessmanager.client/obj/Release
+/src/AltinnAccessManager/AltinnAccessManager.Server/bin/CompiledSPA/net10.0
+/src/AltinnAccessManager/altinnaccessmanager.client/obj/CompiledSPA
