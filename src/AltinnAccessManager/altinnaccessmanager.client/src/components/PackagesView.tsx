@@ -1,47 +1,37 @@
 import { useState, useEffect } from 'react';
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
-import type { AreaGroupDto, PackageDto, AreaDto } from '../types/metadata';
-import { getAreaGroups, getPackagesByAreaId } from '../services/metadataApi';
+import type { AreaGroupDto, AreaDto } from '../types/metadata';
+import { exportAccessPackages } from '../services/metadataApi';
 
 export function PackagesView() {
-  const [areaGroups, setAreaGroups] = useState<AreaGroupDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<AreaGroupDto | null>(null);
-  const [selectedArea, setSelectedArea] = useState<AreaDto | null>(null);
-  const [packages, setPackages] = useState<PackageDto[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+const [areaGroups, setAreaGroups] = useState<AreaGroupDto[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
+const [selectedGroup, setSelectedGroup] = useState<AreaGroupDto | null>(null);
+const [selectedArea, setSelectedArea] = useState<AreaDto | null>(null);
+const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    loadAreaGroups();
-  }, []);
+useEffect(() => {
+  loadData();
+}, []);
 
-  const loadAreaGroups = async () => {
-    try {
-      setLoading(true);
-      const data = await getAreaGroups();
-      setAreaGroups(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load area groups');
-    } finally {
-      setLoading(false);
-    }
-  };
+const loadData = async () => {
+  try {
+    setLoading(true);
+    // Use export endpoint which returns the full hierarchy (groups -> areas -> packages)
+    const data = await exportAccessPackages();
+    setAreaGroups(data);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to load access packages');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleAreaClick = async (area: AreaDto) => {
-    setSelectedArea(area);
-    setLoadingPackages(true);
-    try {
-      const data = await getPackagesByAreaId(area.id);
-      setPackages(data);
-    } catch (err) {
-      console.error('Failed to load packages:', err);
-      setPackages([]);
-    } finally {
-      setLoadingPackages(false);
-    }
-  };
+const handleAreaClick = (area: AreaDto) => {
+  setSelectedArea(area);
+  // Packages are already loaded in the area object from the export endpoint
+};
 
   const filteredGroups = areaGroups.filter(group =>
     group.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -64,7 +54,7 @@ export function PackagesView() {
       <div className="p-8">
         <Card data-color="danger" className="p-4">
           <Paragraph>Error: {error}</Paragraph>
-          <Button onClick={loadAreaGroups} className="mt-4">Retry</Button>
+          <Button onClick={loadData} className="mt-4">Retry</Button>
         </Card>
       </div>
     );
@@ -99,7 +89,6 @@ export function PackagesView() {
                 onClick={() => {
                   setSelectedGroup(group);
                   setSelectedArea(null);
-                  setPackages([]);
                 }}
               >
                 <Heading level={4} data-size="xs">{group.name || 'Unnamed Group'}</Heading>
@@ -160,13 +149,9 @@ export function PackagesView() {
           <Heading level={3} data-size="sm" className="mb-3">
             Packages {selectedArea && `in ${selectedArea.name}`}
           </Heading>
-          {loadingPackages ? (
-            <div className="flex items-center justify-center p-8">
-              <Spinner aria-label="Loading packages..." />
-            </div>
-          ) : selectedArea ? (
+          {selectedArea ? (
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
-              {packages.map(pkg => (
+              {selectedArea.packages?.map(pkg => (
                 <Card key={pkg.id} data-color="neutral" className="p-3">
                   <Heading level={4} data-size="xs">{pkg.name || 'Unnamed Package'}</Heading>
                   {pkg.description && (
@@ -192,7 +177,7 @@ export function PackagesView() {
                   )}
                 </Card>
               ))}
-              {packages.length === 0 && (
+              {(!selectedArea.packages || selectedArea.packages.length === 0) && (
                 <Paragraph className="text-gray-500 italic">No packages in this area</Paragraph>
               )}
             </div>
