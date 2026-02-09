@@ -9,6 +9,7 @@
     <SpaProxyServerUrl>https://localhost:55327</SpaProxyServerUrl>
     <!-- Define available configurations -->
     <Configurations>Debug;Release;CompiledSPA</Configurations>
+    <UserSecretsId>b067a6cb-cf82-40f0-acc8-80bee754cbeb</UserSecretsId>
   </PropertyGroup>
 
   <!-- Auto-enable BuildSpa for CompiledSPA configuration -->
