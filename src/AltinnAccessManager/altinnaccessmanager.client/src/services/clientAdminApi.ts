@@ -176,3 +176,39 @@ export async function revokeAccessPackages(
   }
   return response.json();
 }
+
+// CSV Export
+
+export async function downloadDelegationsCsv(party: string): Promise<void> {
+  const params = new URLSearchParams({ party });
+  
+  const response = await fetch(`${API_BASE}/export/delegations?${params}`);
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Not authenticated. Please log in first.');
+    }
+    const errorText = await response.text();
+    throw new Error(`Failed to export delegations: ${response.status} - ${errorText}`);
+  }
+  
+  // Get the filename from Content-Disposition header or use default
+  const contentDisposition = response.headers.get('Content-Disposition');
+  let filename = `client-delegations-${party}.csv`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (match && match[1]) {
+      filename = match[1].replace(/['"]/g, '');
+    }
+  }
+  
+  // Download the file
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}

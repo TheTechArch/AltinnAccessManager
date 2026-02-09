@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, Heading, Paragraph, Button, Textfield, Alert } from '@digdir/designsystemet-react';
 import type { ClientDto, AgentDto } from '../types/clientAdmin';
+import { downloadDelegationsCsv } from '../services/clientAdminApi';
 import { ClientsView } from './ClientsView';
 import { AgentsView } from './AgentsView';
 import { ClientDetails } from './ClientDetails';
@@ -19,6 +20,8 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
   const [tempPartyId, setTempPartyId] = useState<string>('');
   const [selectedClient, setSelectedClient] = useState<ClientDto | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<AgentDto | null>(null);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const handleSetParty = () => {
     if (tempPartyId.trim()) {
@@ -34,6 +37,18 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
   const handleSelectAgent = (agent: AgentDto) => {
     setSelectedAgent(agent);
     setCurrentView('agent-details');
+  };
+
+  const handleDownloadCsv = async () => {
+    try {
+      setDownloadingCsv(true);
+      setDownloadError(null);
+      await downloadDelegationsCsv(partyId);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : 'Failed to download CSV');
+    } finally {
+      setDownloadingCsv(false);
+    }
   };
 
   // Not authenticated view
@@ -156,6 +171,13 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
             </Alert>
           </div>
 
+          {downloadError && (
+            <Alert data-color="danger" className="mb-4">
+              <Heading level={3} data-size="xs">Download Error</Heading>
+              <Paragraph>{downloadError}</Paragraph>
+            </Alert>
+          )}
+
           {/* Quick Actions */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <Card 
@@ -198,6 +220,37 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
               </div>
             </Card>
           </div>
+
+          {/* Bulk Operations */}
+          <Card data-color="neutral" className="p-6 mb-8">
+            <Heading level={3} data-size="md" className="mb-4">Bulk Operations</Heading>
+            <Paragraph className="text-gray-600 mb-4">
+              For organizations managing large numbers of clients and agents, you can export and import delegations in CSV format.
+            </Paragraph>
+            <div className="flex flex-wrap gap-4">
+              <Button 
+                onClick={handleDownloadCsv}
+                disabled={downloadingCsv}
+                variant="secondary"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {downloadingCsv ? 'Downloading...' : 'Download Delegations (CSV)'}
+              </Button>
+            </div>
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <Paragraph data-size="sm" className="text-gray-600">
+                <strong>CSV Format:</strong> agentId, accesspackage, client, status
+              </Paragraph>
+              <Paragraph data-size="xs" className="text-gray-500 mt-1">
+                - <strong>agentId</strong>: Person identifier (fodselsnummer) of the agent<br/>
+                - <strong>accesspackage</strong>: URN of the access package<br/>
+                - <strong>client</strong>: Organization identifier of the client<br/>
+                - <strong>status</strong>: 'n' for existing/new delegations
+              </Paragraph>
+            </div>
+          </Card>
 
           {/* Info Section */}
           <Card data-color="neutral" className="p-6">

@@ -1,6 +1,7 @@
 using Altinn.Authorization.Api.Contracts.AccessManagement;
 using AltinnAccessManager.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 
 namespace AltinnAccessManager.Server.Controllers;
 
@@ -274,6 +275,107 @@ public class ClientAdminController : ControllerBase
         }
 
         return Ok(result);
+    }
+
+    #endregion
+
+    #region CSV Export
+
+    /// <summary>
+    /// Downloads all client delegations in CSV format.
+    /// Format: agentId (personIdentifier), accesspackage urn, client (organizationIdentifier), status
+    /// Status is 'n' for all rows (new/existing). When uploading, 'u' indicates deletion.
+    /// </summary>
+    /// <param name="party">The party UUID.</param>
+    /// <returns>CSV file with client delegations.</returns>
+    [HttpGet("export/delegations")]
+    [Produces("text/csv")]
+    public async Task<IActionResult> ExportDelegationsCsv([FromQuery] Guid party)
+    {
+        _logger.LogInformation("Exporting client delegations CSV for party: {Party}", party);
+
+        var altinnToken = GetAltinnToken();
+        if (string.IsNullOrEmpty(altinnToken))
+        {
+            return Unauthorized("Altinn token is required. Please log in first.");
+        }
+
+        try
+        {
+            // Get all agents for the party
+            var agentsResult = await _clientAdminService.GetAgentsAsync(party, pageSize: 1000, altinnToken: altinnToken);
+            if (agentsResult == null)
+            {
+                return StatusCode(502, "Failed to retrieve agents from Altinn API");
+            }
+
+            var csvBuilder = new StringBuilder();
+            
+            // Header row
+            csvBuilder.AppendLine("agentId,accesspackage,client,status");
+
+            // For each agent, get their access packages by client
+            foreach (var agent in agentsResult.Data)
+            {
+                if (agent.Agent?.Id == null) continue;
+
+                var agentId = agent.Agent.PersonIdentifier ?? agent.Agent.Id.ToString();
+
+                // Get the agent's access packages grouped by client
+                var accessPackagesResult = await _clientAdminService.GetAgentAccessPackagesAsync(party, agent.Agent.Id, altinnToken);
+                
+                if (accessPackagesResult?.Data != null)
+                {
+                    foreach (var clientPkg in accessPackagesResult.Data)
+                    {
+                        var clientId = clientPkg.Client?.OrganizationIdentifier ?? clientPkg.Client?.Id.ToString() ?? "unknown";
+
+                        if (clientPkg.Access != null)
+                        {
+                            foreach (var roleAccess in clientPkg.Access)
+                            {
+                                if (roleAccess.Packages != null)
+                                {
+                                    foreach (var package in roleAccess.Packages)
+                                    {
+                                        var packageUrn = package.Urn ?? package.Id.ToString();
+                                        
+                                        // Escape CSV fields if they contain commas or quotes
+                                        var escapedAgentId = EscapeCsvField(agentId);
+                                        var escapedPackageUrn = EscapeCsvField(packageUrn);
+                                        var escapedClientId = EscapeCsvField(clientId);
+                                        
+                                        csvBuilder.AppendLine($"{escapedAgentId},{escapedPackageUrn},{escapedClientId},n");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            var csvContent = csvBuilder.ToString();
+            var bytes = Encoding.UTF8.GetBytes(csvContent);
+            var fileName = $"client-delegations-{party}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv";
+
+            return File(bytes, "text/csv", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting client delegations CSV for party: {Party}", party);
+            return StatusCode(500, "An error occurred while generating the CSV export");
+        }
+    }
+
+    private static string EscapeCsvField(string field)
+    {
+        if (string.IsNullOrEmpty(field)) return field;
+        
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n'))
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        return field;
     }
 
     #endregion
