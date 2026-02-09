@@ -104,28 +104,36 @@ const handlePackageClick = async (pkg: PackageDto) => {
         <div>
           <Heading level={3} data-size="sm" className="mb-3">Area Groups</Heading>
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
-            {filteredGroups.map(group => (
-              <Card
-                key={group.id}
-                data-color={selectedGroup?.id === group.id ? 'accent' : 'neutral'}
-                className="p-3 cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => {
-                  setSelectedGroup(group);
-                  setSelectedArea(null);
-                  setSelectedPackage(null);
-                }}
-              >
-                <Heading level={4} data-size="xs">{group.name || 'Unnamed Group'}</Heading>
-                <Tag data-size="sm" data-color="info" className="mt-1">
-                  {group.areas?.length || 0} areas
-                </Tag>
-                {group.type && (
-                  <Tag data-size="sm" data-color="neutral" className="mt-1 ml-1">
-                    {group.type}
-                  </Tag>
-                )}
-              </Card>
-            ))}
+            {filteredGroups.map(group => {
+              const totalPackages = group.areas?.reduce((sum, area) => sum + (area.packages?.length || 0), 0) || 0;
+              return (
+                <Card
+                  key={group.id}
+                  data-color={selectedGroup?.id === group.id ? 'accent' : 'neutral'}
+                  className="p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    setSelectedGroup(group);
+                    setSelectedArea(null);
+                    setSelectedPackage(null);
+                  }}
+                >
+                  <Heading level={4} data-size="xs">{group.name || 'Unnamed Group'}</Heading>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <Tag data-size="sm" data-color="info">
+                      {group.areas?.length || 0} areas
+                    </Tag>
+                    <Tag data-size="sm" data-color="success">
+                      {totalPackages} packages
+                    </Tag>
+                    {group.type && (
+                      <Tag data-size="sm" data-color="neutral">
+                        {group.type}
+                      </Tag>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
