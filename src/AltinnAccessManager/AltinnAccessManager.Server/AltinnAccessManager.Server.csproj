@@ -28,6 +28,7 @@
     <ProjectReference Include="..\altinnaccessmanager.client\altinnaccessmanager.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\Altinn.Authorization.Api.Contracts\Altinn.Authorization.Api.Contracts.csproj" />
   </ItemGroup>
 
   <!-- Build SPA and copy to wwwroot when BuildSpa=true -->
