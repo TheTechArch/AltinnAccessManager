@@ -18,6 +18,9 @@ builder.Services.Configure<AltinnAuthenticationSettings>(builder.Configuration.G
 // Configure Altinn Metadata settings
 builder.Services.Configure<AltinnMetadataSettings>(builder.Configuration.GetSection("AltinnMetadata"));
 
+// Configure Altinn Client Admin settings
+builder.Services.Configure<AltinnClientAdminSettings>(builder.Configuration.GetSection("AltinnClientAdmin"));
+
 // Register ID-porten service with HttpClient
 builder.Services.AddHttpClient<IIdPortenService, IdPortenService>();
 
@@ -26,6 +29,9 @@ builder.Services.AddHttpClient<IAltinnAuthenticationService, AltinnAuthenticatio
 
 // Register Altinn Metadata service with HttpClient
 builder.Services.AddHttpClient<IAltinnMetadataService, AltinnMetadataService>();
+
+// Register Client Admin service with HttpClient
+builder.Services.AddHttpClient<IClientAdminService, ClientAdminService>();
 
 var app = builder.Build();
 
