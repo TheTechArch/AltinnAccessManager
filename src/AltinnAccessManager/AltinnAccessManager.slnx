@@ -1,6 +1,5 @@
 <Solution>
   <Configurations>
-    <Platform Name="Any CPU" />
     <BuildType Name="Debug" />
     <BuildType Name="Release" />
     <BuildType Name="CompiledSPA" />
@@ -11,5 +10,4 @@
     <Deploy />
   </Project>
   <Project Path="AltinnAccessManager.Server/AltinnAccessManager.Server.csproj" />
-  <Project Path="ClassLibrary1/ClassLibrary1.csproj" Id="3c0d7693-50b9-4aab-8474-92eb89774ce1" />
 </Solution>
