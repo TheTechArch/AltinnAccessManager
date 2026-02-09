@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Card, Heading, Paragraph, Spinner, Button, Textfield, Alert } from '@digdir/designsystemet-react';
-import type { ClientDto, PaginatedResult, PersonInput } from '../types/clientAdmin';
+import type { AgentDto, PaginatedResult, PersonInput } from '../types/clientAdmin';
 import { getAgents, addAgent, deleteAgent } from '../services/clientAdminApi';
 
 interface AgentsViewProps {
   partyId: string;
-  onSelectAgent: (agent: ClientDto) => void;
+  onSelectAgent: (agent: AgentDto) => void;
   onBack: () => void;
 }
 
 export function AgentsView({ partyId, onSelectAgent, onBack }: AgentsViewProps) {
-  const [agents, setAgents] = useState<ClientDto[]>([]);
+  const [agents, setAgents] = useState<AgentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +27,7 @@ export function AgentsView({ partyId, onSelectAgent, onBack }: AgentsViewProps) 
     try {
       setLoading(true);
       setError(null);
-      const result: PaginatedResult<ClientDto> = await getAgents(partyId);
+      const result: PaginatedResult<AgentDto> = await getAgents(partyId);
       setAgents(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load agents');
@@ -71,8 +71,8 @@ export function AgentsView({ partyId, onSelectAgent, onBack }: AgentsViewProps) 
   };
 
   const filteredAgents = agents.filter(agent =>
-    agent.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.client?.personIdentifier?.includes(searchTerm)
+    agent.agent?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    agent.agent?.personIdentifier?.includes(searchTerm)
   );
 
   if (loading) {
@@ -162,7 +162,7 @@ export function AgentsView({ partyId, onSelectAgent, onBack }: AgentsViewProps) 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAgents.map((agent, index) => (
             <Card 
-              key={agent.client?.id || index} 
+              key={agent.agent?.id || index} 
               data-color="neutral" 
               className="p-4"
             >
@@ -172,15 +172,15 @@ export function AgentsView({ partyId, onSelectAgent, onBack }: AgentsViewProps) 
                   onClick={() => onSelectAgent(agent)}
                 >
                   <Heading level={3} data-size="sm" className="mb-1">
-                    {agent.client?.name || 'Unknown'}
+                    {agent.agent?.name || 'Unknown'}
                   </Heading>
-                  {agent.client?.personIdentifier && (
+                  {agent.agent?.personIdentifier && (
                     <Paragraph data-size="sm" className="text-gray-500 mb-2">
-                      ID: {agent.client.personIdentifier.substring(0, 6)}******
+                      ID: {agent.agent.personIdentifier.substring(0, 6)}******
                     </Paragraph>
                   )}
                   <Paragraph data-size="sm" className="text-gray-600">
-                    Type: {agent.client?.type || 'Person'}
+                    Type: {agent.agent?.type || 'Person'}
                   </Paragraph>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -193,11 +193,11 @@ export function AgentsView({ partyId, onSelectAgent, onBack }: AgentsViewProps) 
                     data-color="danger"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (agent.client?.id) handleDeleteAgent(agent.client.id);
+                      if (agent.agent?.id) handleDeleteAgent(agent.agent.id);
                     }}
-                    disabled={deletingAgent === agent.client?.id}
+                    disabled={deletingAgent === agent.agent?.id}
                   >
-                    {deletingAgent === agent.client?.id ? 'Removing...' : 'Remove'}
+                    {deletingAgent === agent.agent?.id ? 'Removing...' : 'Remove'}
                   </Button>
                 </div>
               </div>

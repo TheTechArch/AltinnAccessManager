@@ -102,7 +102,7 @@ public class ClientAdminController : ControllerBase
     /// <param name="pageNumber">Optional page number.</param>
     /// <returns>Paginated list of agents.</returns>
     [HttpGet("agents")]
-    public async Task<ActionResult<PaginatedResult<ClientDto>>> GetAgents(
+    public async Task<ActionResult<PaginatedResult<AgentDto>>> GetAgents(
         [FromQuery] Guid party,
         [FromQuery] uint? pageSize = null,
         [FromQuery] uint? pageNumber = null)

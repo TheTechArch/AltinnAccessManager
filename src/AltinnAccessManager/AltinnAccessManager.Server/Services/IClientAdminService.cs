@@ -24,7 +24,7 @@ public interface IClientAdminService
     /// <summary>
     /// Gets all agents for a party.
     /// </summary>
-    Task<PaginatedResult<ClientDto>?> GetAgentsAsync(Guid party, uint? pageSize = null, uint? pageNumber = null, string? altinnToken = null);
+    Task<PaginatedResult<AgentDto>?> GetAgentsAsync(Guid party, uint? pageSize = null, uint? pageNumber = null, string? altinnToken = null);
 
     /// <summary>
     /// Adds a new agent to a party.

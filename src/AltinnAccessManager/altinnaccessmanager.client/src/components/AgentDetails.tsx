@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, Heading, Paragraph, Spinner, Button, Alert, Tag } from '@digdir/designsystemet-react';
-import type { ClientDto, PaginatedResult } from '../types/clientAdmin';
+import type { AgentDto, ClientDto, PaginatedResult } from '../types/clientAdmin';
 import { getAgentAccessPackages } from '../services/clientAdminApi';
 
 interface AgentDetailsProps {
   partyId: string;
-  agent: ClientDto;
+  agent: AgentDto;
   onBack: () => void;
 }
 
@@ -15,16 +15,16 @@ export function AgentDetails({ partyId, agent, onBack }: AgentDetailsProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (agent.client?.id) {
+    if (agent.agent?.id) {
       loadAgentAccessPackages();
     }
-  }, [agent.client?.id]);
+  }, [agent.agent?.id]);
 
   const loadAgentAccessPackages = async () => {
     try {
       setLoading(true);
       setError(null);
-      const result: PaginatedResult<ClientDto> = await getAgentAccessPackages(partyId, agent.client!.id);
+      const result: PaginatedResult<ClientDto> = await getAgentAccessPackages(partyId, agent.agent!.id);
       setClientPackages(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load agent details');
@@ -53,15 +53,15 @@ export function AgentDetails({ partyId, agent, onBack }: AgentDetailsProps) {
           <div>
             <Tag data-color="success" data-size="sm" className="mb-2">Agent</Tag>
             <Heading level={2} data-size="lg" className="mb-2">
-              {agent.client?.name || 'Unknown Agent'}
+              {agent.agent?.name || 'Unknown Agent'}
             </Heading>
-            {agent.client?.personIdentifier && (
+            {agent.agent?.personIdentifier && (
               <Paragraph className="text-gray-600 mb-1">
-                Personal ID: {agent.client.personIdentifier.substring(0, 6)}******
+                Personal ID: {agent.agent.personIdentifier.substring(0, 6)}******
               </Paragraph>
             )}
             <Paragraph className="text-gray-500">
-              Type: {agent.client?.type || 'Person'}
+              Type: {agent.agent?.type || 'Person'}
             </Paragraph>
           </div>
           <div className="text-right">

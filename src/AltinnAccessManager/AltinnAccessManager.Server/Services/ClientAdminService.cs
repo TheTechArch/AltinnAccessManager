@@ -109,7 +109,7 @@ public class ClientAdminService : IClientAdminService
 
     // Agent endpoints
 
-    public async Task<PaginatedResult<ClientDto>?> GetAgentsAsync(Guid party, uint? pageSize = null, uint? pageNumber = null, string? altinnToken = null)
+    public async Task<PaginatedResult<AgentDto>?> GetAgentsAsync(Guid party, uint? pageSize = null, uint? pageNumber = null, string? altinnToken = null)
     {
         try
         {
@@ -131,7 +131,7 @@ public class ClientAdminService : IClientAdminService
             
             response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadFromJsonAsync<PaginatedResult<ClientDto>>(_jsonOptions);
+            return await response.Content.ReadFromJsonAsync<PaginatedResult<AgentDto>>(_jsonOptions);
         }
         catch (Exception ex)
         {

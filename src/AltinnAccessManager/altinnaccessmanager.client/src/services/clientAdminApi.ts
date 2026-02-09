@@ -56,7 +56,7 @@ export async function getAgents(
   party: string,
   pageSize?: number,
   pageNumber?: number
-): Promise<PaginatedResult<ClientDto>> {
+): Promise<PaginatedResult<AgentDto>> {
   const params = new URLSearchParams({ party });
   if (pageSize) params.append('pageSize', pageSize.toString());
   if (pageNumber) params.append('pageNumber', pageNumber.toString());

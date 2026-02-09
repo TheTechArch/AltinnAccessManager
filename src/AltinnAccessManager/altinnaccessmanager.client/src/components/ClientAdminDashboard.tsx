@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, Heading, Paragraph, Button, Textfield, Alert } from '@digdir/designsystemet-react';
-import type { ClientDto } from '../types/clientAdmin';
+import type { ClientDto, AgentDto } from '../types/clientAdmin';
 import { ClientsView } from './ClientsView';
 import { AgentsView } from './AgentsView';
 import { ClientDetails } from './ClientDetails';
@@ -18,7 +18,7 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
   const [partyId, setPartyId] = useState<string>('');
   const [tempPartyId, setTempPartyId] = useState<string>('');
   const [selectedClient, setSelectedClient] = useState<ClientDto | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<ClientDto | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<AgentDto | null>(null);
 
   const handleSetParty = () => {
     if (tempPartyId.trim()) {
@@ -31,7 +31,7 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
     setCurrentView('client-details');
   };
 
-  const handleSelectAgent = (agent: ClientDto) => {
+  const handleSelectAgent = (agent: AgentDto) => {
     setSelectedAgent(agent);
     setCurrentView('agent-details');
   };
