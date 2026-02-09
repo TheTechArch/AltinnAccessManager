@@ -12,8 +12,14 @@ builder.Services.AddOpenApi();
 // Configure ID-porten settings
 builder.Services.Configure<IdPortenSettings>(builder.Configuration.GetSection("IdPorten"));
 
+// Configure Altinn Authentication settings
+builder.Services.Configure<AltinnAuthenticationSettings>(builder.Configuration.GetSection("AltinnAuthentication"));
+
 // Register ID-porten service with HttpClient
 builder.Services.AddHttpClient<IIdPortenService, IdPortenService>();
+
+// Register Altinn Authentication service with HttpClient
+builder.Services.AddHttpClient<IAltinnAuthenticationService, AltinnAuthenticationService>();
 
 var app = builder.Build();
 

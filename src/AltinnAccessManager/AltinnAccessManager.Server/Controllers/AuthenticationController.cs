@@ -12,6 +12,7 @@ namespace AltinnAccessManager.Server.Controllers;
 public class AuthenticationController : ControllerBase
 {
     private readonly IIdPortenService _idPortenService;
+    private readonly IAltinnAuthenticationService _altinnAuthenticationService;
     private readonly ILogger<AuthenticationController> _logger;
 
     // In-memory state store - in production, use distributed cache (Redis) or database
@@ -20,9 +21,11 @@ public class AuthenticationController : ControllerBase
 
     public AuthenticationController(
         IIdPortenService idPortenService,
+        IAltinnAuthenticationService altinnAuthenticationService,
         ILogger<AuthenticationController> logger)
     {
         _idPortenService = idPortenService;
+        _altinnAuthenticationService = altinnAuthenticationService;
         _logger = logger;
     }
 
@@ -114,6 +117,21 @@ public class AuthenticationController : ControllerBase
 
         _logger.LogInformation("Successfully authenticated user via ID-porten");
 
+        // Exchange ID-porten access token for Altinn token
+        string? altinnToken = null;
+        if (!string.IsNullOrEmpty(tokenResponse.AccessToken))
+        {
+            altinnToken = await _altinnAuthenticationService.ExchangeTokenAsync(tokenResponse.AccessToken);
+            if (altinnToken == null)
+            {
+                _logger.LogWarning("Failed to exchange ID-porten token for Altinn token, continuing without Altinn token");
+            }
+            else
+            {
+                _logger.LogInformation("Successfully exchanged ID-porten token for Altinn token");
+            }
+        }
+
         // Store tokens in HTTP-only cookie for security
         CookieOptions cookieOptions = new()
         {
@@ -128,6 +146,12 @@ public class AuthenticationController : ControllerBase
         if (!string.IsNullOrEmpty(tokenResponse.IdToken))
         {
             Response.Cookies.Append("id_token", tokenResponse.IdToken, cookieOptions);
+        }
+
+        // Store Altinn token in HTTP-only cookie
+        if (!string.IsNullOrEmpty(altinnToken))
+        {
+            Response.Cookies.Append("altinn_token", altinnToken, cookieOptions);
         }
 
         if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
@@ -159,6 +183,7 @@ public class AuthenticationController : ControllerBase
         Response.Cookies.Delete("access_token");
         Response.Cookies.Delete("id_token");
         Response.Cookies.Delete("refresh_token");
+        Response.Cookies.Delete("altinn_token");
 
         return Redirect("/?logout=success");
     }
@@ -173,9 +198,13 @@ public class AuthenticationController : ControllerBase
         var hasAccessToken = Request.Cookies.ContainsKey("access_token") && 
                             !string.IsNullOrEmpty(Request.Cookies["access_token"]);
 
+        var hasAltinnToken = Request.Cookies.ContainsKey("altinn_token") && 
+                            !string.IsNullOrEmpty(Request.Cookies["altinn_token"]);
+
         return Ok(new
         {
             IsAuthenticated = hasAccessToken,
+            HasAltinnToken = hasAltinnToken,
             Message = hasAccessToken ? "User is authenticated" : "User is not authenticated"
         });
     }
