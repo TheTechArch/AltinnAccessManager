@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
-import type { AreaGroupDto, AreaDto } from '../types/metadata';
-import { exportAccessPackages } from '../services/metadataApi';
+import type { AreaGroupDto, AreaDto, PackageDto } from '../types/metadata';
+import { exportAccessPackages, getPackageById } from '../services/metadataApi';
 
 export function PackagesView() {
 const [areaGroups, setAreaGroups] = useState<AreaGroupDto[]>([]);
@@ -9,6 +9,8 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
 const [selectedGroup, setSelectedGroup] = useState<AreaGroupDto | null>(null);
 const [selectedArea, setSelectedArea] = useState<AreaDto | null>(null);
+const [selectedPackage, setSelectedPackage] = useState<PackageDto | null>(null);
+const [loadingPackage, setLoadingPackage] = useState(false);
 const [searchTerm, setSearchTerm] = useState('');
 
 useEffect(() => {
@@ -30,7 +32,28 @@ const loadData = async () => {
 
 const handleAreaClick = (area: AreaDto) => {
   setSelectedArea(area);
-  // Packages are already loaded in the area object from the export endpoint
+  setSelectedPackage(null);
+};
+
+const handlePackageClick = async (pkg: PackageDto) => {
+  // Toggle off if clicking the same package
+  if (selectedPackage?.id === pkg.id) {
+    setSelectedPackage(null);
+    return;
+  }
+
+  // Fetch full package details including resources
+  setLoadingPackage(true);
+  setSelectedPackage(pkg); // Show basic info immediately
+  try {
+    const fullPackage = await getPackageById(pkg.id);
+    setSelectedPackage(fullPackage);
+  } catch (err) {
+    console.error('Failed to load package details:', err);
+    // Keep showing basic package info if fetch fails
+  } finally {
+    setLoadingPackage(false);
+  }
 };
 
   const filteredGroups = areaGroups.filter(group =>
@@ -89,6 +112,7 @@ const handleAreaClick = (area: AreaDto) => {
                 onClick={() => {
                   setSelectedGroup(group);
                   setSelectedArea(null);
+                  setSelectedPackage(null);
                 }}
               >
                 <Heading level={4} data-size="xs">{group.name || 'Unnamed Group'}</Heading>
@@ -152,7 +176,12 @@ const handleAreaClick = (area: AreaDto) => {
           {selectedArea ? (
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
               {selectedArea.packages?.map(pkg => (
-                <Card key={pkg.id} data-color="neutral" className="p-3">
+                <Card 
+                  key={pkg.id} 
+                  data-color={selectedPackage?.id === pkg.id ? 'accent' : 'neutral'} 
+                  className="p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handlePackageClick(pkg)}
+                >
                   <Heading level={4} data-size="xs">{pkg.name || 'Unnamed Package'}</Heading>
                   {pkg.description && (
                     <Paragraph data-size="sm" className="text-gray-600 mt-1 line-clamp-2">
@@ -186,6 +215,108 @@ const handleAreaClick = (area: AreaDto) => {
           )}
         </div>
       </div>
+
+      {/* Package Resources Panel */}
+      {selectedPackage && (
+        <div className="mt-6">
+          <Card data-color="neutral" className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <Heading level={3} data-size="md">{selectedPackage.name}</Heading>
+                {selectedPackage.description && (
+                  <Paragraph className="text-gray-600 mt-1">{selectedPackage.description}</Paragraph>
+                )}
+              </div>
+              <Button 
+                variant="tertiary" 
+                data-size="sm"
+                onClick={() => setSelectedPackage(null)}
+              >
+                ? Close
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedPackage.isDelegable && (
+                <Tag data-color="success">Delegable</Tag>
+              )}
+              {selectedPackage.isAssignable && (
+                <Tag data-color="info">Assignable</Tag>
+              )}
+              {selectedPackage.isResourcePolicyAvailable && (
+                <Tag data-color="warning">Resource Policy Available</Tag>
+              )}
+            </div>
+
+            {selectedPackage.urn && (
+              <div className="mb-4 p-2 bg-gray-100 rounded">
+                <Paragraph data-size="sm" className="font-semibold">URN</Paragraph>
+                <code className="text-sm break-all">{selectedPackage.urn}</code>
+              </div>
+            )}
+
+            <div className="border-t pt-4">
+              <Heading level={4} data-size="sm" className="mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Resources {!loadingPackage && `(${selectedPackage.resources?.length || 0})`}
+              </Heading>
+
+              {loadingPackage ? (
+                <div className="flex items-center justify-center py-8">
+                  <Spinner aria-label="Loading resources..." />
+                  <span className="ml-2 text-gray-500">Loading resources...</span>
+                </div>
+              ) : selectedPackage.resources && selectedPackage.resources.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {selectedPackage.resources.map(resource => (
+                    <Card key={resource.id} data-color="info" className="p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <Heading level={5} data-size="xs" className="truncate">
+                            {resource.name || 'Unnamed Resource'}
+                          </Heading>
+                          {resource.description && (
+                            <Paragraph data-size="sm" className="text-gray-600 mt-1 line-clamp-2">
+                              {resource.description}
+                            </Paragraph>
+                          )}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {resource.type?.name && (
+                              <Tag data-size="sm" data-color="neutral">{resource.type.name}</Tag>
+                            )}
+                            {resource.provider?.name && (
+                              <Tag data-size="sm" data-color="info">{resource.provider.name}</Tag>
+                            )}
+                          </div>
+                          {resource.refId && (
+                            <code className="text-xs text-gray-500 block mt-1 truncate" title={resource.refId}>
+                              {resource.refId}
+                            </code>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  <Paragraph className="text-gray-500">No resources in this package</Paragraph>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
