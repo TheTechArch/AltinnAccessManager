@@ -104,7 +104,7 @@ public class AuthenticationController : ControllerBase
         }
 
         // Exchange code for tokens
-        var tokenResponse = await _idPortenService.ExchangeCodeForTokensAsync(code, storedState);
+        TokenResponse? tokenResponse = await _idPortenService.ExchangeCodeForTokensAsync(code, storedState);
 
         if (tokenResponse == null)
         {
@@ -115,7 +115,7 @@ public class AuthenticationController : ControllerBase
         _logger.LogInformation("Successfully authenticated user via ID-porten");
 
         // Store tokens in HTTP-only cookie for security
-        var cookieOptions = new CookieOptions
+        CookieOptions cookieOptions = new()
         {
             HttpOnly = true,
             Secure = true,
@@ -143,7 +143,7 @@ public class AuthenticationController : ControllerBase
         }
 
         // Redirect to the original return URL or home page
-        var redirectUrl = storedState.ReturnUrl ?? "/";
+        string redirectUrl = storedState.ReturnUrl ?? "/";
         return Redirect($"{redirectUrl}?login=success");
     }
 
