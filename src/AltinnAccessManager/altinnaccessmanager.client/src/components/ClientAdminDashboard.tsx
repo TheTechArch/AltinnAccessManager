@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, Heading, Paragraph, Button, Textfield, Alert } from '@digdir/designsystemet-react';
 import type { ClientDto, AgentDto } from '../types/clientAdmin';
-import { downloadDelegationsCsv } from '../services/clientAdminApi';
+import { downloadDelegationsCsv, uploadDelegationsCsv, type ImportResult } from '../services/clientAdminApi';
 import { ClientsView } from './ClientsView';
 import { AgentsView } from './AgentsView';
 import { ClientDetails } from './ClientDetails';
@@ -22,6 +22,10 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
   const [selectedAgent, setSelectedAgent] = useState<AgentDto | null>(null);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [uploadingCsv, setUploadingCsv] = useState(false);
+  const [uploadResult, setUploadResult] = useState<ImportResult | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSetParty = () => {
     if (tempPartyId.trim()) {
@@ -48,6 +52,31 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
       setDownloadError(err instanceof Error ? err.message : 'Failed to download CSV');
     } finally {
       setDownloadingCsv(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingCsv(true);
+      setUploadError(null);
+      setUploadResult(null);
+      const result = await uploadDelegationsCsv(partyId, file);
+      setUploadResult(result);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload CSV');
+    } finally {
+      setUploadingCsv(false);
+      // Reset the file input so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -227,7 +256,8 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
             <Paragraph className="text-gray-600 mb-4">
               For organizations managing large numbers of clients and agents, you can export and import delegations in CSV format.
             </Paragraph>
-            <div className="flex flex-wrap gap-4">
+            
+            <div className="flex flex-wrap gap-4 mb-4">
               <Button 
                 onClick={handleDownloadCsv}
                 disabled={downloadingCsv}
@@ -238,8 +268,66 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
                 </svg>
                 {downloadingCsv ? 'Downloading...' : 'Download Delegations (CSV)'}
               </Button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+              />
+              <Button 
+                onClick={handleUploadClick}
+                disabled={uploadingCsv}
+                variant="secondary"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {uploadingCsv ? 'Uploading...' : 'Upload Delegations (CSV)'}
+              </Button>
             </div>
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+
+            {uploadError && (
+              <Alert data-color="danger" className="mb-4">
+                <Heading level={4} data-size="xs">Upload Error</Heading>
+                <Paragraph>{uploadError}</Paragraph>
+              </Alert>
+            )}
+
+            {uploadResult && (
+              <Alert data-color={uploadResult.failedCount > 0 ? "warning" : "success"} className="mb-4">
+                <Heading level={4} data-size="xs">Import Complete</Heading>
+                <div className="mt-2 space-y-1">
+                  <Paragraph data-size="sm">
+                    <strong>Changed:</strong> {uploadResult.successCount} | 
+                    <strong className="ml-2">Unchanged:</strong> {uploadResult.unchangedCount} | 
+                    <strong className="ml-2">Failed:</strong> {uploadResult.failedCount} | 
+                    <strong className="ml-2">Skipped:</strong> {uploadResult.skipped}
+                  </Paragraph>
+                  <Paragraph data-size="sm">
+                    <strong>Agents added:</strong> {uploadResult.agentsAdded} | 
+                    <strong className="ml-2">Delegations added:</strong> {uploadResult.delegationsAdded} | 
+                    <strong className="ml-2">Delegations removed:</strong> {uploadResult.delegationsRemoved}
+                  </Paragraph>
+                  {uploadResult.errors.length > 0 && (
+                    <div className="mt-2">
+                      <Paragraph data-size="xs" className="font-semibold">Errors:</Paragraph>
+                      <ul className="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto">
+                        {uploadResult.errors.slice(0, 10).map((error, idx) => (
+                          <li key={idx}>{error}</li>
+                        ))}
+                        {uploadResult.errors.length > 10 && (
+                          <li>...and {uploadResult.errors.length - 10} more errors</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </Alert>
+            )}
+
+            <div className="p-4 bg-gray-50 rounded-lg">
               <Paragraph data-size="sm" className="text-gray-600">
                 <strong>CSV Format:</strong> status;orgnumber;fnumber;name;package;email
               </Paragraph>
@@ -247,7 +335,7 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
                 - <strong>status</strong>: A = Active, U = Utgatt (delete when uploading)<br/>
                 - <strong>orgnumber</strong>: Organization number of the client<br/>
                 - <strong>fnumber</strong>: Person identifier (fodselsnummer) of the agent<br/>
-                - <strong>name</strong>: Name of the agent<br/>
+                - <strong>name</strong>: Name of the agent (used as lastName when adding new agent)<br/>
                 - <strong>package</strong>: URN of the access package<br/>
                 - <strong>email</strong>: Email address (- if not available)
               </Paragraph>

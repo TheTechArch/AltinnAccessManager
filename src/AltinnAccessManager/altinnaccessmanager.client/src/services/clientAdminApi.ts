@@ -212,3 +212,38 @@ export async function downloadDelegationsCsv(party: string): Promise<void> {
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 }
+
+// CSV Import
+
+export interface ImportResult {
+  successCount: number;
+  failedCount: number;
+  skipped: number;
+  unchangedCount: number;
+  agentsAdded: number;
+  delegationsAdded: number;
+  delegationsRemoved: number;
+  errors: string[];
+}
+
+export async function uploadDelegationsCsv(party: string, file: File): Promise<ImportResult> {
+  const params = new URLSearchParams({ party });
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch(`${API_BASE}/import/delegations?${params}`, {
+    method: 'POST',
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Not authenticated. Please log in first.');
+    }
+    const errorText = await response.text();
+    throw new Error(`Failed to import delegations: ${response.status} - ${errorText}`);
+  }
+  
+  return response.json();
+}

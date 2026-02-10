@@ -366,6 +366,438 @@ public class ClientAdminController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Uploads and processes a CSV file with delegation changes.
+    /// Format: status;orgnumber;fnumber;name;package;email
+    /// A = Active (add/keep delegation), U = Utgått (delete delegation)
+    /// </summary>
+    /// <param name="party">The party UUID.</param>
+    /// <param name="file">The CSV file to upload.</param>
+    /// <returns>Processing result with success/failure counts.</returns>
+    [HttpPost("import/delegations")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> ImportDelegationsCsv([FromQuery] Guid party, IFormFile file)
+    {
+        _logger.LogInformation("Importing client delegations CSV for party: {Party}", party);
+
+        var altinnToken = GetAltinnToken();
+        if (string.IsNullOrEmpty(altinnToken))
+        {
+            return Unauthorized("Altinn token is required. Please log in first.");
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest("No file uploaded or file is empty.");
+        }
+
+        try
+        {
+            // Read CSV content
+            string csvContent;
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            {
+                csvContent = await reader.ReadToEndAsync();
+            }
+
+            var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            
+            // Get all existing agents for the party to check if agent exists
+            var agentsResult = await _clientAdminService.GetAgentsAsync(party, pageSize: 1000, altinnToken: altinnToken);
+            var existingAgents = agentsResult?.Data ?? [];
+            
+            // Build a lookup of existing agents by personIdentifier
+            var agentLookup = new Dictionary<string, AgentDto>(StringComparer.OrdinalIgnoreCase);
+            foreach (var agent in existingAgents)
+            {
+                if (!string.IsNullOrEmpty(agent.Agent?.PersonIdentifier))
+                {
+                    agentLookup[agent.Agent.PersonIdentifier] = agent;
+                }
+            }
+
+            // Get all clients to build org number to client ID mapping
+            var clientsResult = await _clientAdminService.GetClientsAsync(party, altinnToken: altinnToken);
+            var clientLookup = new Dictionary<string, ClientDto>(StringComparer.OrdinalIgnoreCase);
+            if (clientsResult?.Data != null)
+            {
+                foreach (var client in clientsResult.Data)
+                {
+                    if (!string.IsNullOrEmpty(client.Client?.OrganizationIdentifier))
+                    {
+                        clientLookup[client.Client.OrganizationIdentifier] = client;
+                    }
+                }
+            }
+
+            // Build a lookup of existing delegations: agentFnumber -> orgNumber -> set of packageUrns
+            var existingDelegations = new Dictionary<string, Dictionary<string, HashSet<string>>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var agent in existingAgents)
+            {
+                if (agent.Agent?.Id == null || string.IsNullOrEmpty(agent.Agent.PersonIdentifier)) continue;
+
+                var agentPackages = await _clientAdminService.GetAgentAccessPackagesAsync(party, agent.Agent.Id, altinnToken);
+                if (agentPackages?.Data == null) continue;
+
+                var fnumber = agent.Agent.PersonIdentifier;
+                if (!existingDelegations.ContainsKey(fnumber))
+                {
+                    existingDelegations[fnumber] = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                }
+
+                foreach (var clientPkg in agentPackages.Data)
+                {
+                    var orgNumber = clientPkg.Client?.OrganizationIdentifier;
+                    if (string.IsNullOrEmpty(orgNumber)) continue;
+
+                    if (!existingDelegations[fnumber].ContainsKey(orgNumber))
+                    {
+                        existingDelegations[fnumber][orgNumber] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    if (clientPkg.Access != null)
+                    {
+                        foreach (var roleAccess in clientPkg.Access)
+                        {
+                            if (roleAccess.Packages != null)
+                            {
+                                foreach (var pkg in roleAccess.Packages)
+                                {
+                                    if (!string.IsNullOrEmpty(pkg.Urn))
+                                    {
+                                        existingDelegations[fnumber][orgNumber].Add(pkg.Urn);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            var results = new ImportResult();
+            var processedRows = new List<string>();
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine)) continue;
+
+                // Parse CSV line (semicolon separated)
+                var fields = ParseCsvLine(trimmedLine, ';');
+                if (fields.Length < 5)
+                {
+                    results.Errors.Add($"Invalid line format: {trimmedLine}");
+                    results.FailedCount++;
+                    continue;
+                }
+
+                var status = fields[0].Trim().ToUpperInvariant();
+                var orgNumber = fields[1].Trim();
+                var fnumber = fields[2].Trim();
+                var name = fields[3].Trim();
+                var packageUrn = fields[4].Trim();
+                // email field (5) is ignored for now
+
+                try
+                {
+                    if (status == "A")
+                    {
+                        // Active - ensure agent exists and delegation is in place
+                        await ProcessActiveDelegation(party, orgNumber, fnumber, name, packageUrn, 
+                            agentLookup, clientLookup, existingDelegations, altinnToken, results);
+                    }
+                    else if (status == "U")
+                    {
+                        // Utgått - remove delegation if exists
+                        await ProcessDeleteDelegation(party, orgNumber, fnumber, packageUrn,
+                            agentLookup, clientLookup, existingDelegations, altinnToken, results);
+                    }
+                    else
+                    {
+                        results.Errors.Add($"Unknown status '{status}' for fnumber {fnumber}");
+                        results.FailedCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing row: {Line}", trimmedLine);
+                    results.Errors.Add($"Error processing {fnumber}/{orgNumber}: {ex.Message}");
+                    results.FailedCount++;
+                }
+            }
+
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing client delegations CSV for party: {Party}", party);
+            return StatusCode(500, $"An error occurred while processing the CSV import: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessActiveDelegation(
+        Guid party, 
+        string orgNumber, 
+        string fnumber, 
+        string name, 
+        string packageUrn,
+        Dictionary<string, AgentDto> agentLookup,
+        Dictionary<string, ClientDto> clientLookup,
+        Dictionary<string, Dictionary<string, HashSet<string>>> existingDelegations,
+        string altinnToken,
+        ImportResult results)
+    {
+        // Check if this delegation already exists
+        if (existingDelegations.TryGetValue(fnumber, out var agentDelegations) &&
+            agentDelegations.TryGetValue(orgNumber, out var packages) &&
+            packages.Contains(packageUrn))
+        {
+            // Delegation already exists - no change needed
+            results.UnchangedCount++;
+            return;
+        }
+
+        // Check if agent exists
+        Guid agentId;
+        if (agentLookup.TryGetValue(fnumber, out var existingAgent) && existingAgent.Agent?.Id != null)
+        {
+            agentId = existingAgent.Agent.Id;
+            _logger.LogInformation("Agent {Fnumber} already exists with ID {AgentId}", fnumber, agentId);
+        }
+        else
+        {
+            // Add new agent - use name as lastName
+            _logger.LogInformation("Adding new agent {Fnumber} with lastName {Name}", fnumber, name);
+            var personInput = new PersonInput
+            {
+                PersonIdentifier = fnumber,
+                LastName = name
+            };
+
+            var addResult = await _clientAdminService.AddAgentAsync(party, null, personInput, altinnToken);
+            if (addResult == null)
+            {
+                results.Errors.Add($"Failed to add agent {fnumber}");
+                results.FailedCount++;
+                return;
+            }
+
+            agentId = addResult.ToId;
+            results.AgentsAdded++;
+            
+            // Update lookup for future rows
+            agentLookup[fnumber] = new AgentDto 
+            { 
+                Agent = new CompactEntityDto { Id = agentId, PersonIdentifier = fnumber, Name = name } 
+            };
+
+            // Initialize delegation tracking for new agent
+            existingDelegations[fnumber] = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        // Check if client exists
+        if (!clientLookup.TryGetValue(orgNumber, out var client) || client.Client?.Id == null)
+        {
+            results.Errors.Add($"Client with org number {orgNumber} not found");
+            results.FailedCount++;
+            return;
+        }
+
+        var clientId = client.Client.Id;
+
+        // Find the role for this package from the client's access
+        string? roleUrn = null;
+        if (client.Access != null)
+        {
+            foreach (var roleAccess in client.Access)
+            {
+                if (roleAccess.Packages?.Any(p => 
+                    string.Equals(p.Urn, packageUrn, StringComparison.OrdinalIgnoreCase)) == true)
+                {
+                    roleUrn = roleAccess.Role?.Urn ?? roleAccess.Role?.Code;
+                    break;
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(roleUrn))
+        {
+            // Try to use the package URN directly without a specific role
+            roleUrn = "urn:altinn:role:client"; // Default role for client delegations
+        }
+
+        // Delegate the access package
+        var delegations = new DelegationBatchInputDto
+        {
+            Values =
+            [
+                new DelegationBatchInputDto.Permission
+                {
+                    Role = roleUrn,
+                    Packages = [packageUrn]
+                }
+            ]
+        };
+
+        var delegateResult = await _clientAdminService.DelegateAccessPackagesToAgentAsync(party, clientId, agentId, delegations, altinnToken);
+        if (delegateResult == null)
+        {
+            results.Errors.Add($"Failed to delegate {packageUrn} from {orgNumber} to {fnumber}");
+            results.FailedCount++;
+            return;
+        }
+
+        // Update delegation tracking
+        if (!existingDelegations[fnumber].ContainsKey(orgNumber))
+        {
+            existingDelegations[fnumber][orgNumber] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+        existingDelegations[fnumber][orgNumber].Add(packageUrn);
+
+        results.DelegationsAdded++;
+        results.SuccessCount++;
+    }
+
+    private async Task ProcessDeleteDelegation(
+        Guid party,
+        string orgNumber,
+        string fnumber,
+        string packageUrn,
+        Dictionary<string, AgentDto> agentLookup,
+        Dictionary<string, ClientDto> clientLookup,
+        Dictionary<string, Dictionary<string, HashSet<string>>> existingDelegations,
+        string altinnToken,
+        ImportResult results)
+    {
+        // Check if agent exists
+        if (!agentLookup.TryGetValue(fnumber, out var existingAgent) || existingAgent.Agent?.Id == null)
+        {
+            // Agent doesn't exist, nothing to delete
+            results.Skipped++;
+            return;
+        }
+
+        // Check if the delegation even exists
+        if (!existingDelegations.TryGetValue(fnumber, out var agentDelegations) ||
+            !agentDelegations.TryGetValue(orgNumber, out var packages) ||
+            !packages.Contains(packageUrn))
+        {
+            // Delegation doesn't exist - nothing to delete
+            results.Skipped++;
+            return;
+        }
+
+        var agentId = existingAgent.Agent.Id;
+
+        // Check if client exists
+        if (!clientLookup.TryGetValue(orgNumber, out var client) || client.Client?.Id == null)
+        {
+            // Client doesn't exist, nothing to delete
+            results.Skipped++;
+            return;
+        }
+
+        var clientId = client.Client.Id;
+
+        // Find the role for this package
+        string? roleUrn = null;
+        if (client.Access != null)
+        {
+            foreach (var roleAccess in client.Access)
+            {
+                if (roleAccess.Packages?.Any(p => 
+                    string.Equals(p.Urn, packageUrn, StringComparison.OrdinalIgnoreCase)) == true)
+                {
+                    roleUrn = roleAccess.Role?.Urn ?? roleAccess.Role?.Code;
+                    break;
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(roleUrn))
+        {
+            roleUrn = "urn:altinn:role:client";
+        }
+
+        // Revoke the access package
+        var delegations = new DelegationBatchInputDto
+        {
+            Values =
+            [
+                new DelegationBatchInputDto.Permission
+                {
+                    Role = roleUrn,
+                    Packages = [packageUrn]
+                }
+            ]
+        };
+
+        var revokeResult = await _clientAdminService.RevokeAccessPackagesFromAgentAsync(party, clientId, agentId, delegations, altinnToken);
+        if (revokeResult == null)
+        {
+            // May have already been deleted or doesn't exist - treat as skipped
+            results.Skipped++;
+            return;
+        }
+
+        // Update delegation tracking
+        packages.Remove(packageUrn);
+
+        results.DelegationsRemoved++;
+        results.SuccessCount++;
+    }
+
+    private static string[] ParseCsvLine(string line, char delimiter)
+    {
+        var fields = new List<string>();
+        var currentField = new StringBuilder();
+        var inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            var c = line[i];
+
+            if (inQuotes)
+            {
+                if (c == '"')
+                {
+                    if (i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        currentField.Append('"');
+                        i++;
+                    }
+                    else
+                    {
+                        inQuotes = false;
+                    }
+                }
+                else
+                {
+                    currentField.Append(c);
+                }
+            }
+            else
+            {
+                if (c == '"')
+                {
+                    inQuotes = true;
+                }
+                else if (c == delimiter)
+                {
+                    fields.Add(currentField.ToString());
+                    currentField.Clear();
+                }
+                else
+                {
+                    currentField.Append(c);
+                }
+            }
+        }
+
+        fields.Add(currentField.ToString());
+        return [.. fields];
+    }
+
     private static string EscapeCsvField(string field, char delimiter)
     {
         if (string.IsNullOrEmpty(field)) return field;
@@ -378,4 +810,19 @@ public class ClientAdminController : ControllerBase
     }
 
     #endregion
+}
+
+/// <summary>
+/// Result of CSV import operation.
+/// </summary>
+public class ImportResult
+{
+    public int SuccessCount { get; set; }
+    public int FailedCount { get; set; }
+    public int Skipped { get; set; }
+    public int UnchangedCount { get; set; }
+    public int AgentsAdded { get; set; }
+    public int DelegationsAdded { get; set; }
+    public int DelegationsRemoved { get; set; }
+    public List<string> Errors { get; set; } = [];
 }
