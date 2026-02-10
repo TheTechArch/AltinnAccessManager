@@ -3,7 +3,11 @@ import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digd
 import type { SubTypeDto } from '../types/metadata';
 import { getOrganizationSubTypes } from '../services/metadataApi';
 
-export function OrganizationTypesView() {
+interface OrganizationTypesViewProps {
+  language?: string;
+}
+
+export function OrganizationTypesView({ language }: OrganizationTypesViewProps) {
   const [subTypes, setSubTypes] = useState<SubTypeDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,12 +15,12 @@ export function OrganizationTypesView() {
 
   useEffect(() => {
     loadSubTypes();
-  }, []);
+  }, [language]);
 
   const loadSubTypes = async () => {
     try {
       setLoading(true);
-      const data = await getOrganizationSubTypes();
+      const data = await getOrganizationSubTypes(language);
       setSubTypes(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load organization subtypes');

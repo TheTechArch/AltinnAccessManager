@@ -3,7 +3,11 @@ import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digd
 import type { AreaGroupDto, AreaDto, PackageDto } from '../types/metadata';
 import { exportAccessPackages, getPackageById } from '../services/metadataApi';
 
-export function PackagesView() {
+interface PackagesViewProps {
+  language?: string;
+}
+
+export function PackagesView({ language }: PackagesViewProps) {
 const [areaGroups, setAreaGroups] = useState<AreaGroupDto[]>([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
@@ -15,13 +19,13 @@ const [searchTerm, setSearchTerm] = useState('');
 
 useEffect(() => {
   loadData();
-}, []);
+}, [language]);
 
 const loadData = async () => {
   try {
     setLoading(true);
     // Use export endpoint which returns the full hierarchy (groups -> areas -> packages)
-    const data = await exportAccessPackages();
+    const data = await exportAccessPackages(language);
     setAreaGroups(data);
   } catch (err) {
     setError(err instanceof Error ? err.message : 'Failed to load access packages');
@@ -46,7 +50,7 @@ const handlePackageClick = async (pkg: PackageDto) => {
   setLoadingPackage(true);
   setSelectedPackage(pkg); // Show basic info immediately
   try {
-    const fullPackage = await getPackageById(pkg.id);
+    const fullPackage = await getPackageById(pkg.id, language);
     setSelectedPackage(fullPackage);
   } catch (err) {
     console.error('Failed to load package details:', err);

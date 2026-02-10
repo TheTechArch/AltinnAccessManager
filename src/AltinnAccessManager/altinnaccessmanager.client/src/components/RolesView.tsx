@@ -3,7 +3,11 @@ import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digd
 import type { RoleDto } from '../types/metadata';
 import { getRoles } from '../services/metadataApi';
 
-export function RolesView() {
+interface RolesViewProps {
+  language?: string;
+}
+
+export function RolesView({ language }: RolesViewProps) {
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,12 +17,12 @@ export function RolesView() {
 
   useEffect(() => {
     loadRoles();
-  }, []);
+  }, [language]);
 
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const data = await getRoles();
+      const data = await getRoles(language);
       setRoles(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load roles');

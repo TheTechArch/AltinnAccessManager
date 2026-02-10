@@ -3,7 +3,11 @@ import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digd
 import type { SearchObjectOfPackageDto, PackageDto } from '../types/metadata';
 import { searchPackages, getPackageById } from '../services/metadataApi';
 
-export function PackageSearchView() {
+interface PackageSearchViewProps {
+  language?: string;
+}
+
+export function PackageSearchView({ language }: PackageSearchViewProps) {
   const [results, setResults] = useState<SearchObjectOfPackageDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +25,7 @@ export function PackageSearchView() {
       setError(null);
       setHasSearched(true);
       setSelectedPackage(null);
-      const data = await searchPackages(searchTerm, undefined, searchInResources);
+      const data = await searchPackages(searchTerm, undefined, searchInResources, undefined, language);
       setResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -41,7 +45,7 @@ export function PackageSearchView() {
     // Fetch full package details including resources
     setLoadingPackage(true);
     try {
-      const fullPackage = await getPackageById(packageId);
+      const fullPackage = await getPackageById(packageId, language);
       setSelectedPackage(fullPackage);
     } catch (err) {
       console.error('Failed to load package details:', err);

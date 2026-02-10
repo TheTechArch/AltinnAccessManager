@@ -5,13 +5,16 @@ import { RolesView } from './components/RolesView'
 import { OrganizationTypesView } from './components/OrganizationTypesView'
 import { PackageSearchView } from './components/PackageSearchView'
 import { ClientAdminDashboard } from './components/ClientAdminDashboard'
+import { LanguageProvider, useLanguage } from './context/LanguageContext'
+import { LanguageSelector } from './components/LanguageSelector'
 
 type View = 'home' | 'packages' | 'search' | 'roles' | 'types' | 'clientadmin';
 
-function App() {
+function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('home');
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     // Check authentication status on component mount
@@ -57,13 +60,13 @@ function App() {
   const renderContent = () => {
     switch (currentView) {
       case 'packages':
-        return <PackagesView />;
+        return <PackagesView language={language} />;
       case 'search':
-        return <PackageSearchView />;
+        return <PackageSearchView language={language} />;
       case 'roles':
-        return <RolesView />;
+        return <RolesView language={language} />;
       case 'types':
-        return <OrganizationTypesView />;
+        return <OrganizationTypesView language={language} />;
       case 'clientadmin':
         return <ClientAdminDashboard isAuthenticated={isAuthenticated} onLogin={handleLogin} />;
       default:
@@ -76,20 +79,19 @@ function App() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-[#1E2B3C] to-[#2E4156] text-white py-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <Tag data-color="info" data-size="sm" className="mb-4">Reference Implementation</Tag>
+          <Tag data-color="info" data-size="sm" className="mb-4">{t('home.tagline')}</Tag>
           <Heading level={1} data-size="2xl" className="text-white mb-6">
-            The Ultimate Access Management Tool
+            {t('home.title')}
           </Heading>
           <Paragraph data-size="lg" className="text-gray-200 max-w-3xl mx-auto mb-8">
-            Explore and showcase the Altinn Authorization API with this comprehensive reference implementation.
-            Manage roles, delegations, consents, and system users with ease.
+            {t('home.subtitle')}
           </Paragraph>
           <div className="flex flex-wrap justify-center gap-4">
             <Button data-size="lg" onClick={() => setCurrentView('packages')}>
-              Browse Packages
+              {t('home.browsePackages')}
             </Button>
             <Button variant="secondary" data-size="lg" onClick={() => setCurrentView('roles')}>
-              View Roles
+              {t('home.viewRoles')}
             </Button>
           </div>
         </div>
@@ -99,7 +101,7 @@ function App() {
       <section className="py-12 px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <Heading level={2} data-size="lg" className="mb-6 text-center">
-            Explore Metadata
+            {t('home.exploreMetadata')}
           </Heading>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card 
@@ -112,9 +114,9 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <Heading level={3} data-size="sm" className="mb-2">Access Packages</Heading>
+              <Heading level={3} data-size="sm" className="mb-2">{t('card.accessPackages')}</Heading>
               <Paragraph data-size="sm" className="text-gray-600">
-                Browse packages organized by area groups and areas.
+                {t('card.accessPackages.desc')}
               </Paragraph>
             </Card>
 
@@ -128,9 +130,9 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <Heading level={3} data-size="sm" className="mb-2">Search Packages</Heading>
+              <Heading level={3} data-size="sm" className="mb-2">{t('card.searchPackages')}</Heading>
               <Paragraph data-size="sm" className="text-gray-600">
-                Search for packages by name or description.
+                {t('card.searchPackages.desc')}
               </Paragraph>
             </Card>
 
@@ -144,9 +146,9 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <Heading level={3} data-size="sm" className="mb-2">Roles</Heading>
+              <Heading level={3} data-size="sm" className="mb-2">{t('card.roles')}</Heading>
               <Paragraph data-size="sm" className="text-gray-600">
-                View all available roles in the authorization system.
+                {t('card.roles.desc')}
               </Paragraph>
             </Card>
 
@@ -160,9 +162,9 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <Heading level={3} data-size="sm" className="mb-2">Organization Types</Heading>
+              <Heading level={3} data-size="sm" className="mb-2">{t('card.organizationTypes')}</Heading>
               <Paragraph data-size="sm" className="text-gray-600">
-                Browse organization subtypes and their configurations.
+                {t('card.organizationTypes.desc')}
               </Paragraph>
             </Card>
 
@@ -176,11 +178,11 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <Heading level={3} data-size="sm" className="mb-2">Client Admin</Heading>
+              <Heading level={3} data-size="sm" className="mb-2">{t('card.clientAdmin')}</Heading>
               <Paragraph data-size="sm" className="text-gray-600">
-                Manage client delegations and agents for your organization.
+                {t('card.clientAdmin.desc')}
               </Paragraph>
-              <Tag data-color="success" data-size="sm" className="mt-2">New</Tag>
+              <Tag data-color="success" data-size="sm" className="mt-2">{t('card.new')}</Tag>
             </Card>
           </div>
         </div>
@@ -191,10 +193,10 @@ function App() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <Heading level={2} data-size="xl" className="mb-4">
-              Showcase Authorization API Features
+              {t('features.title')}
             </Heading>
             <Paragraph className="text-gray-600 max-w-2xl mx-auto">
-              This reference implementation demonstrates all major capabilities of the Altinn Authorization API.
+              {t('features.subtitle')}
             </Paragraph>
           </div>
 
@@ -384,47 +386,48 @@ console.log(roles);`}</pre>
               <rect width="40" height="40" rx="8" fill="#E23B53" />
               <path d="M12 28L20 12L28 28H12Z" fill="white" />
             </svg>
-            <span className="text-xl font-semibold">Altinn Access Manager</span>
+            <span className="text-xl font-semibold">{t('header.title')}</span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <button 
               onClick={() => setCurrentView('packages')} 
               className={`hover:text-gray-300 transition-colors ${currentView === 'packages' ? 'text-white font-semibold' : ''}`}
             >
-              Packages
+              {t('header.packages')}
             </button>
             <button 
               onClick={() => setCurrentView('search')} 
               className={`hover:text-gray-300 transition-colors ${currentView === 'search' ? 'text-white font-semibold' : ''}`}
             >
-              Search
+              {t('header.search')}
             </button>
             <button 
               onClick={() => setCurrentView('roles')} 
               className={`hover:text-gray-300 transition-colors ${currentView === 'roles' ? 'text-white font-semibold' : ''}`}
             >
-              Roles
+              {t('header.roles')}
             </button>
             <button 
               onClick={() => setCurrentView('types')} 
               className={`hover:text-gray-300 transition-colors ${currentView === 'types' ? 'text-white font-semibold' : ''}`}
             >
-              Types
+              {t('header.types')}
             </button>
             <button 
               onClick={() => setCurrentView('clientadmin')} 
               className={`hover:text-gray-300 transition-colors ${currentView === 'clientadmin' ? 'text-white font-semibold' : ''}`}
             >
-              Client Admin
+              {t('header.clientAdmin')}
             </button>
+            <LanguageSelector />
             {!isLoading && (
               isAuthenticated ? (
                 <Button variant="secondary" data-size="sm" onClick={handleLogout}>
-                  Logg ut
+                  {t('header.logout')}
                 </Button>
               ) : (
                 <Button data-size="sm" onClick={handleLogin}>
-                  Logg inn med ID-porten
+                  {t('header.login')}
                 </Button>
               )
             )}
@@ -436,6 +439,14 @@ console.log(roles);`}</pre>
       {renderContent()}
     </div>
   )
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
 }
 
 export default App
