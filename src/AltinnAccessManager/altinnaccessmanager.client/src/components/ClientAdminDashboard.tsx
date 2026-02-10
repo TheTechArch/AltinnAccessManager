@@ -310,6 +310,11 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
                     <strong className="ml-2">Delegations added:</strong> {uploadResult.delegationsAdded} | 
                     <strong className="ml-2">Delegations removed:</strong> {uploadResult.delegationsRemoved}
                   </Paragraph>
+                  {uploadResult.packageNamesMigrated > 0 && (
+                    <Paragraph data-size="sm" className="text-blue-600">
+                      <strong>Package names migrated:</strong> {uploadResult.packageNamesMigrated} (old format converted to URN)
+                    </Paragraph>
+                  )}
                   {uploadResult.errors.length > 0 && (
                     <div className="mt-2">
                       <Paragraph data-size="xs" className="font-semibold">Errors:</Paragraph>

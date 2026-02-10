@@ -400,7 +400,14 @@ public class ClientAdminController : ControllerBase
                 csvContent = await reader.ReadToEndAsync();
             }
 
-            var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            // Normalize old package names to new URN format
+            var (normalizedContent, migrationCount) = NormalizePackageNames(csvContent);
+            if (migrationCount > 0)
+            {
+                _logger.LogInformation("Migrated {MigrationCount} old package names to new URN format", migrationCount);
+            }
+
+            var lines = normalizedContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             
             // Get all existing agents for the party to check if agent exists
             var agentsResult = await _clientAdminService.GetAgentsAsync(party, pageSize: 1000, altinnToken: altinnToken);
@@ -474,7 +481,10 @@ public class ClientAdminController : ControllerBase
                 }
             }
 
-            var results = new ImportResult();
+            var results = new ImportResult
+            {
+                PackageNamesMigrated = migrationCount
+            };
             var processedRows = new List<string>();
 
             foreach (var line in lines)
@@ -798,6 +808,46 @@ public class ClientAdminController : ControllerBase
         return [.. fields];
     }
 
+    /// <summary>
+    /// Mapping of old package names to new URN format.
+    /// Keys are lowercase for case-insensitive matching.
+    /// </summary>
+    private static readonly Dictionary<string, string> PackageNameMigrationMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Regnskapsfører lønn", "urn:altinn:accesspackage:regnskapsforer-lonn" },
+        { "Regnskapsfører med signeringsrettighet", "urn:altinn:accesspackage:regnskapsforer-med-signeringsrettighet" },
+        { "Regnskapsfører uten signeringsrettighet", "urn:altinn:accesspackage:regnskapsforer-uten-signeringsrettighet" },
+        { "Revisormedarbeider", "urn:altinn:accesspackage:revisormedarbeider" },
+        { "Revisorrettighet", "urn:altinn:accesspackage:ansvarlig-revisor" }
+    };
+
+    /// <summary>
+    /// Normalizes package names in CSV content by replacing old format names with new URN format.
+    /// </summary>
+    /// <param name="csvContent">The raw CSV content.</param>
+    /// <returns>CSV content with normalized package names and count of migrations performed.</returns>
+    private static (string NormalizedContent, int MigrationCount) NormalizePackageNames(string csvContent)
+    {
+        var migrationCount = 0;
+        var result = csvContent;
+
+        foreach (var mapping in PackageNameMigrationMap)
+        {
+            // Count occurrences before replacement (case-insensitive)
+            var regex = new System.Text.RegularExpressions.Regex(
+                System.Text.RegularExpressions.Regex.Escape(mapping.Key), 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            
+            var matches = regex.Matches(result);
+            migrationCount += matches.Count;
+            
+            // Replace all occurrences (case-insensitive)
+            result = regex.Replace(result, mapping.Value);
+        }
+
+        return (result, migrationCount);
+    }
+
     private static string EscapeCsvField(string field, char delimiter)
     {
         if (string.IsNullOrEmpty(field)) return field;
@@ -824,5 +874,6 @@ public class ImportResult
     public int AgentsAdded { get; set; }
     public int DelegationsAdded { get; set; }
     public int DelegationsRemoved { get; set; }
+    public int PackageNamesMigrated { get; set; }
     public List<string> Errors { get; set; } = [];
 }

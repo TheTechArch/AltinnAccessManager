@@ -223,6 +223,7 @@ export interface ImportResult {
   agentsAdded: number;
   delegationsAdded: number;
   delegationsRemoved: number;
+  packageNamesMigrated: number;
   errors: string[];
 }
 
