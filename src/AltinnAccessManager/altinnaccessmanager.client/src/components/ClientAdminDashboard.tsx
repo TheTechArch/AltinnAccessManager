@@ -241,13 +241,15 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
             </div>
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <Paragraph data-size="sm" className="text-gray-600">
-                <strong>CSV Format:</strong> agentId, accesspackage, client, status
+                <strong>CSV Format:</strong> status;orgnumber;fnumber;name;package;email
               </Paragraph>
               <Paragraph data-size="xs" className="text-gray-500 mt-1">
-                - <strong>agentId</strong>: Person identifier (fodselsnummer) of the agent<br/>
-                - <strong>accesspackage</strong>: URN of the access package<br/>
-                - <strong>client</strong>: Organization identifier of the client<br/>
-                - <strong>status</strong>: 'n' for existing/new delegations
+                - <strong>status</strong>: A = Active, U = Utgatt (delete when uploading)<br/>
+                - <strong>orgnumber</strong>: Organization number of the client<br/>
+                - <strong>fnumber</strong>: Person identifier (fodselsnummer) of the agent<br/>
+                - <strong>name</strong>: Name of the agent<br/>
+                - <strong>package</strong>: URN of the access package<br/>
+                - <strong>email</strong>: Email address (- if not available)
               </Paragraph>
             </div>
           </Card>

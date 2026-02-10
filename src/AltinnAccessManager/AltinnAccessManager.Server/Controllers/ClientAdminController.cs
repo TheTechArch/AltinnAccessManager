@@ -283,8 +283,8 @@ public class ClientAdminController : ControllerBase
 
     /// <summary>
     /// Downloads all client delegations in CSV format.
-    /// Format: agentId (personIdentifier), accesspackage urn, client (organizationIdentifier), status
-    /// Status is 'n' for all rows (new/existing). When uploading, 'u' indicates deletion.
+    /// Format: A;orgnumber;fnumber agent;name agent;package urn;email
+    /// A = Active (existing delegation), U = Utgått (delete when uploading)
     /// </summary>
     /// <param name="party">The party UUID.</param>
     /// <returns>CSV file with client delegations.</returns>
@@ -310,16 +310,14 @@ public class ClientAdminController : ControllerBase
             }
 
             var csvBuilder = new StringBuilder();
-            
-            // Header row
-            csvBuilder.AppendLine("agentId,accesspackage,client,status");
 
             // For each agent, get their access packages by client
             foreach (var agent in agentsResult.Data)
             {
                 if (agent.Agent?.Id == null) continue;
 
-                var agentId = agent.Agent.PersonIdentifier ?? agent.Agent.Id.ToString();
+                var agentFnumber = agent.Agent.PersonIdentifier ?? "";
+                var agentName = agent.Agent.Name ?? "";
 
                 // Get the agent's access packages grouped by client
                 var accessPackagesResult = await _clientAdminService.GetAgentAccessPackagesAsync(party, agent.Agent.Id, altinnToken);
@@ -328,7 +326,7 @@ public class ClientAdminController : ControllerBase
                 {
                     foreach (var clientPkg in accessPackagesResult.Data)
                     {
-                        var clientId = clientPkg.Client?.OrganizationIdentifier ?? clientPkg.Client?.Id.ToString() ?? "unknown";
+                        var orgNumber = clientPkg.Client?.OrganizationIdentifier ?? "";
 
                         if (clientPkg.Access != null)
                         {
@@ -340,12 +338,13 @@ public class ClientAdminController : ControllerBase
                                     {
                                         var packageUrn = package.Urn ?? package.Id.ToString();
                                         
-                                        // Escape CSV fields if they contain commas or quotes
-                                        var escapedAgentId = EscapeCsvField(agentId);
-                                        var escapedPackageUrn = EscapeCsvField(packageUrn);
-                                        var escapedClientId = EscapeCsvField(clientId);
+                                        // Escape fields if they contain semicolons
+                                        var escapedOrgNumber = EscapeCsvField(orgNumber, ';');
+                                        var escapedFnumber = EscapeCsvField(agentFnumber, ';');
+                                        var escapedName = EscapeCsvField(agentName, ';');
+                                        var escapedPackageUrn = EscapeCsvField(packageUrn, ';');
                                         
-                                        csvBuilder.AppendLine($"{escapedAgentId},{escapedPackageUrn},{escapedClientId},n");
+                                        csvBuilder.AppendLine($"A;{escapedOrgNumber};{escapedFnumber};{escapedName};{escapedPackageUrn};-");
                                     }
                                 }
                             }
@@ -367,11 +366,11 @@ public class ClientAdminController : ControllerBase
         }
     }
 
-    private static string EscapeCsvField(string field)
+    private static string EscapeCsvField(string field, char delimiter)
     {
         if (string.IsNullOrEmpty(field)) return field;
         
-        if (field.Contains(',') || field.Contains('"') || field.Contains('\n'))
+        if (field.Contains(delimiter) || field.Contains('"') || field.Contains('\n'))
         {
             return $"\"{field.Replace("\"", "\"\"")}\"";
         }
