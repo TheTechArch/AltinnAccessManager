@@ -124,6 +124,59 @@ public class IdPortenService : IIdPortenService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<TokenResponse?> RefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            var tokenRequestParams = new Dictionary<string, string>
+            {
+                ["grant_type"] = "refresh_token",
+                ["refresh_token"] = refreshToken,
+                ["client_id"] = _settings.ClientId
+            };
+
+            // Add client secret based on auth method
+            if (_settings.AuthMethod == "client_secret_post" && !string.IsNullOrEmpty(_settings.ClientSecret))
+            {
+                tokenRequestParams["client_secret"] = _settings.ClientSecret;
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Post, _settings.TokenEndpoint)
+            {
+                Content = new FormUrlEncodedContent(tokenRequestParams)
+            };
+
+            // Add basic auth header if using client_secret_basic
+            if (_settings.AuthMethod == "client_secret_basic" && !string.IsNullOrEmpty(_settings.ClientSecret))
+            {
+                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_settings.ClientId}:{_settings.ClientSecret}"));
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+            }
+
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var response = await _httpClient.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Token refresh failed with status {StatusCode}: {Content}", response.StatusCode, content);
+                return null;
+            }
+
+            var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(content);
+            _logger.LogInformation("Successfully refreshed tokens");
+
+            return tokenResponse;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing tokens");
+            return null;
+        }
+    }
+
     /// <summary>
     /// Generates a cryptographically secure random code verifier for PKCE.
     /// </summary>

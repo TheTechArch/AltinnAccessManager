@@ -1,5 +1,5 @@
 import { Button, Card, Heading, Paragraph, Tag } from '@digdir/designsystemet-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { PackagesView } from './components/PackagesView'
 import { RolesView } from './components/RolesView'
 import { OrganizationTypesView } from './components/OrganizationTypesView'
@@ -10,15 +10,85 @@ import { LanguageSelector } from './components/LanguageSelector'
 
 type View = 'home' | 'packages' | 'search' | 'roles' | 'types' | 'clientadmin';
 
+// Inactivity timeout: 30 minutes without activity means we don't refresh tokens
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('home');
   const { language, t } = useLanguage();
+  
+  // Track last user activity time
+  const lastActivityRef = useRef<number>(Date.now());
+
+  // Update last activity time on user interaction
+  const updateActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+
+  // Check if user has been active recently
+  const isUserActive = useCallback(() => {
+    return Date.now() - lastActivityRef.current < INACTIVITY_TIMEOUT_MS;
+  }, []);
+
+  // Function to refresh tokens
+  const refreshTokens = useCallback(async () => {
+    try {
+      const response = await fetch('/api/authentication/refresh', { method: 'POST' });
+      if (response.ok) {
+        console.log('Tokens refreshed successfully');
+        return true;
+      } else {
+        console.warn('Token refresh failed');
+        setIsAuthenticated(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error refreshing tokens:', error);
+      return false;
+    }
+  }, []);
+
+  // Check auth status and set up automatic token refresh (only if user is active)
+  const checkAuthStatus = useCallback(async (forceCheck = false) => {
+    try {
+      const response = await fetch('/api/authentication/status');
+      const data = await response.json();
+      setIsAuthenticated(data.isAuthenticated);
+      
+      // Only refresh tokens if user has been active recently
+      if (data.isAuthenticated && data.needsRefresh && (forceCheck || isUserActive())) {
+        console.log('Token needs refresh and user is active, refreshing...');
+        await refreshTokens();
+      } else if (data.isAuthenticated && data.needsRefresh && !isUserActive()) {
+        console.log('Token needs refresh but user is inactive, skipping refresh');
+      }
+    } catch (error) {
+      console.error('Failed to check auth status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [refreshTokens, isUserActive]);
+
+  // Set up activity tracking
+  useEffect(() => {
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    
+    activityEvents.forEach(event => {
+      window.addEventListener(event, updateActivity, { passive: true });
+    });
+
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, updateActivity);
+      });
+    };
+  }, [updateActivity]);
 
   useEffect(() => {
-    // Check authentication status on component mount
-    checkAuthStatus();
+    // Check authentication status on component mount (force check on initial load)
+    checkAuthStatus(true);
     
     // Check for login/logout query params
     const urlParams = new URLSearchParams(window.location.search);
@@ -35,19 +105,17 @@ function AppContent() {
       console.error('Authentication error:', urlParams.get('error'), urlParams.get('error_description'));
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
 
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch('/api/authentication/status');
-      const data = await response.json();
-      setIsAuthenticated(data.isAuthenticated);
-    } catch (error) {
-      console.error('Failed to check auth status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // Set up periodic auth status check (every 5 minutes) to handle token refresh
+    // Only refreshes if user has been active
+    const intervalId = setInterval(() => {
+      if (isAuthenticated && isUserActive()) {
+        checkAuthStatus();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(intervalId);
+  }, [checkAuthStatus, isAuthenticated, isUserActive]);
 
   const handleLogin = () => {
     window.location.href = '/api/authentication/login';

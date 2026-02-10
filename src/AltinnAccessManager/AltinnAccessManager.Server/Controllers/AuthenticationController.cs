@@ -15,6 +15,9 @@ public class AuthenticationController : ControllerBase
     private readonly IAltinnAuthenticationService _altinnAuthenticationService;
     private readonly ILogger<AuthenticationController> _logger;
 
+    // Cookie expiration time (72 hours)
+    private static readonly TimeSpan CookieExpiration = TimeSpan.FromHours(72);
+
     // In-memory state store - in production, use distributed cache (Redis) or database
     private static readonly Dictionary<string, AuthorizationState> _stateStore = new();
     private static readonly object _stateLock = new();
@@ -133,12 +136,13 @@ public class AuthenticationController : ControllerBase
         }
 
         // Store tokens in HTTP-only cookie for security
+        // Use 72 hours expiration for longer session duration
         CookieOptions cookieOptions = new()
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
-            Expires = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn)
+            Expires = DateTimeOffset.UtcNow.Add(CookieExpiration)
         };
 
         Response.Cookies.Append("access_token", tokenResponse.AccessToken ?? "", cookieOptions);
@@ -156,15 +160,20 @@ public class AuthenticationController : ControllerBase
 
         if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
         {
-            var refreshCookieOptions = new CookieOptions
+            // Refresh token gets same expiration as other cookies
+            Response.Cookies.Append("refresh_token", tokenResponse.RefreshToken, cookieOptions);
+        }
+
+        // Store token expiration time for refresh logic
+        Response.Cookies.Append("token_expires_at", 
+            DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToUnixTimeSeconds().ToString(), 
+            new CookieOptions
             {
-                HttpOnly = true,
+                HttpOnly = false, // Allow JavaScript to read this for refresh timing
                 Secure = true,
                 SameSite = SameSiteMode.Lax,
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
-            };
-            Response.Cookies.Append("refresh_token", tokenResponse.RefreshToken, refreshCookieOptions);
-        }
+                Expires = DateTimeOffset.UtcNow.Add(CookieExpiration)
+            });
 
         // Redirect to the original return URL or home page
         string redirectUrl = storedState.ReturnUrl ?? "/";
@@ -201,11 +210,116 @@ public class AuthenticationController : ControllerBase
         var hasAltinnToken = Request.Cookies.ContainsKey("altinn_token") && 
                             !string.IsNullOrEmpty(Request.Cookies["altinn_token"]);
 
+        var hasRefreshToken = Request.Cookies.ContainsKey("refresh_token") &&
+                             !string.IsNullOrEmpty(Request.Cookies["refresh_token"]);
+
+        // Check if token is expired or about to expire (within 5 minutes)
+        var needsRefresh = false;
+        if (Request.Cookies.TryGetValue("token_expires_at", out var expiresAtStr) && 
+            long.TryParse(expiresAtStr, out var expiresAt))
+        {
+            var expirationTime = DateTimeOffset.FromUnixTimeSeconds(expiresAt);
+            needsRefresh = expirationTime <= DateTimeOffset.UtcNow.AddMinutes(5);
+        }
+
         return Ok(new
         {
             IsAuthenticated = hasAccessToken,
             HasAltinnToken = hasAltinnToken,
+            HasRefreshToken = hasRefreshToken,
+            NeedsRefresh = needsRefresh && hasRefreshToken,
             Message = hasAccessToken ? "User is authenticated" : "User is not authenticated"
+        });
+    }
+
+    /// <summary>
+    /// Refreshes the access token using the refresh token.
+    /// </summary>
+    /// <returns>Result of the refresh operation.</returns>
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshToken()
+    {
+        _logger.LogInformation("Attempting to refresh tokens");
+
+        var refreshToken = Request.Cookies["refresh_token"];
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            _logger.LogWarning("No refresh token available");
+            return Unauthorized(new { Message = "No refresh token available" });
+        }
+
+        var tokenResponse = await _idPortenService.RefreshTokenAsync(refreshToken);
+        if (tokenResponse == null)
+        {
+            _logger.LogError("Failed to refresh tokens");
+            // Clear cookies since refresh failed
+            Response.Cookies.Delete("access_token");
+            Response.Cookies.Delete("id_token");
+            Response.Cookies.Delete("refresh_token");
+            Response.Cookies.Delete("altinn_token");
+            Response.Cookies.Delete("token_expires_at");
+            return Unauthorized(new { Message = "Failed to refresh tokens. Please log in again." });
+        }
+
+        _logger.LogInformation("Successfully refreshed tokens from ID-porten");
+
+        // Exchange new ID-porten access token for Altinn token
+        string? altinnToken = null;
+        if (!string.IsNullOrEmpty(tokenResponse.AccessToken))
+        {
+            altinnToken = await _altinnAuthenticationService.ExchangeTokenAsync(tokenResponse.AccessToken);
+            if (altinnToken == null)
+            {
+                _logger.LogWarning("Failed to exchange refreshed ID-porten token for Altinn token");
+            }
+            else
+            {
+                _logger.LogInformation("Successfully exchanged refreshed token for Altinn token");
+            }
+        }
+
+        // Update cookies with new tokens
+        CookieOptions cookieOptions = new()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.Add(CookieExpiration)
+        };
+
+        Response.Cookies.Append("access_token", tokenResponse.AccessToken ?? "", cookieOptions);
+        
+        if (!string.IsNullOrEmpty(tokenResponse.IdToken))
+        {
+            Response.Cookies.Append("id_token", tokenResponse.IdToken, cookieOptions);
+        }
+
+        if (!string.IsNullOrEmpty(altinnToken))
+        {
+            Response.Cookies.Append("altinn_token", altinnToken, cookieOptions);
+        }
+
+        // Update refresh token if a new one was provided
+        if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
+        {
+            Response.Cookies.Append("refresh_token", tokenResponse.RefreshToken, cookieOptions);
+        }
+
+        // Update token expiration time
+        Response.Cookies.Append("token_expires_at", 
+            DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToUnixTimeSeconds().ToString(), 
+            new CookieOptions
+            {
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.Add(CookieExpiration)
+            });
+
+        return Ok(new 
+        { 
+            Message = "Tokens refreshed successfully",
+            ExpiresIn = tokenResponse.ExpiresIn
         });
     }
 }

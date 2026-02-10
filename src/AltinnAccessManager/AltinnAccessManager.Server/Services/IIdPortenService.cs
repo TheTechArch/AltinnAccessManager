@@ -21,4 +21,11 @@ public interface IIdPortenService
     /// <param name="state">The authorization state containing the code verifier.</param>
     /// <returns>The token response from ID-porten.</returns>
     Task<TokenResponse?> ExchangeCodeForTokensAsync(string code, AuthorizationState state);
+
+    /// <summary>
+    /// Refreshes the access token using a refresh token.
+    /// </summary>
+    /// <param name="refreshToken">The refresh token.</param>
+    /// <returns>The new token response from ID-porten.</returns>
+    Task<TokenResponse?> RefreshTokenAsync(string refreshToken);
 }
