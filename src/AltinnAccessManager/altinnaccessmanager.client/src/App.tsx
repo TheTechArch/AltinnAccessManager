@@ -53,6 +53,9 @@ function AppContent() {
     }
   }, []);
 
+  // Track if we're currently refreshing to prevent double calls
+  const isRefreshingRef = useRef(false);
+
   // Check auth status and set up automatic token refresh (only if user is active)
   const checkAuthStatus = useCallback(async (forceCheck = false) => {
     try {
@@ -60,10 +63,15 @@ function AppContent() {
       const data = await response.json();
       setIsAuthenticated(data.isAuthenticated);
       
-      // Only refresh tokens if user has been active recently
-      if (data.isAuthenticated && data.needsRefresh && (forceCheck || isUserActive())) {
+      // Only refresh tokens if user has been active recently and not already refreshing
+      if (data.isAuthenticated && data.needsRefresh && !isRefreshingRef.current && (forceCheck || isUserActive())) {
         console.log('Token needs refresh and user is active, refreshing...');
-        await refreshTokens();
+        isRefreshingRef.current = true;
+        try {
+          await refreshTokens();
+        } finally {
+          isRefreshingRef.current = false;
+        }
       } else if (data.isAuthenticated && data.needsRefresh && !isUserActive()) {
         console.log('Token needs refresh but user is inactive, skipping refresh');
       }
@@ -89,28 +97,46 @@ function AppContent() {
     };
   }, [updateActivity]);
 
+  // Initial auth check - runs only once on mount
+  const hasCheckedAuthRef = useRef(false);
+  
   useEffect(() => {
-    // Check authentication status on component mount (force check on initial load)
-    checkAuthStatus(true);
-    
-    // Check for login/logout query params
+    // Check for login/logout query params first
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('login') === 'success') {
+    const justLoggedIn = urlParams.get('login') === 'success';
+    const justLoggedOut = urlParams.get('logout') === 'success';
+    
+    if (justLoggedIn) {
       setIsAuthenticated(true);
+      setIsLoading(false);
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
+      hasCheckedAuthRef.current = true;
+      return; // Don't check auth status right after login - token is fresh
     }
-    if (urlParams.get('logout') === 'success') {
+    
+    if (justLoggedOut) {
       setIsAuthenticated(false);
+      setIsLoading(false);
       window.history.replaceState({}, '', window.location.pathname);
+      hasCheckedAuthRef.current = true;
+      return;
     }
+    
     if (urlParams.get('error')) {
       console.error('Authentication error:', urlParams.get('error'), urlParams.get('error_description'));
       window.history.replaceState({}, '', window.location.pathname);
     }
+    
+    // Only check auth status once on mount (not after login redirect)
+    if (!hasCheckedAuthRef.current) {
+      hasCheckedAuthRef.current = true;
+      checkAuthStatus(true);
+    }
+  }, []); // Empty dependency array - only run on mount
 
-    // Set up periodic auth status check (every 5 minutes) to handle token refresh
-    // Only refreshes if user has been active
+  // Set up periodic auth status check
+  useEffect(() => {
     const intervalId = setInterval(() => {
       if (isAuthenticated && isUserActive()) {
         checkAuthStatus();
