@@ -34,26 +34,24 @@ public class AltinnMetadataService : IAltinnMetadataService
     }
 
     /// <summary>
-    /// Adds language parameter to query string if provided.
+    /// Creates an HttpRequestMessage with the Accept-Language header set.
     /// </summary>
-    private static void AddLanguageParam(System.Collections.Specialized.NameValueCollection queryParams, string? language)
+    private static HttpRequestMessage CreateRequest(HttpMethod method, string url, string? language)
     {
-        if (!string.IsNullOrEmpty(language))
-        {
-            queryParams["language"] = language;
-        }
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Add("Accept-Language", language ?? "nb");
+        return request;
     }
 
     /// <summary>
-    /// Builds URL with optional language parameter.
+    /// Sends a GET request with the Accept-Language header and deserializes the response.
     /// </summary>
-    private static string BuildUrlWithLanguage(string baseUrl, string? language)
+    private async Task<T?> GetWithLanguageAsync<T>(string url, string? language) where T : class
     {
-        if (string.IsNullOrEmpty(language))
-            return baseUrl;
-        
-        var separator = baseUrl.Contains('?') ? "&" : "?";
-        return $"{baseUrl}{separator}language={language}";
+        var request = CreateRequest(HttpMethod.Get, url, language);
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
     }
 
     // Package endpoints
@@ -75,12 +73,11 @@ public class AltinnMetadataService : IAltinnMetadataService
             queryParams["searchInResources"] = searchInResources.ToString().ToLower();
             if (!string.IsNullOrEmpty(typeName))
                 queryParams["typeName"] = typeName;
-            AddLanguageParam(queryParams, language);
 
             var url = $"{_settings.BasePath}/info/accesspackages/search?{queryParams}";
-            _logger.LogInformation("Searching packages with URL: {Url}", url);
+            _logger.LogInformation("Searching packages with URL: {Url}, language: {Language}", url, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<SearchObjectOfPackageDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<SearchObjectOfPackageDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -93,10 +90,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/export", language);
-            _logger.LogInformation("Exporting access packages from: {Url}", url);
+            var url = $"{_settings.BasePath}/info/accesspackages/export";
+            _logger.LogInformation("Exporting access packages from: {Url}, language: {Language}", url, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<AreaGroupDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<AreaGroupDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -109,10 +106,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/group", language);
-            _logger.LogInformation("Getting area groups from: {Url}", url);
+            var url = $"{_settings.BasePath}/info/accesspackages/group";
+            _logger.LogInformation("Getting area groups from: {Url}, language: {Language}", url, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<AreaGroupDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<AreaGroupDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -125,10 +122,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/group/{id}", language);
-            _logger.LogInformation("Getting area group by id: {Id}", id);
+            var url = $"{_settings.BasePath}/info/accesspackages/group/{id}";
+            _logger.LogInformation("Getting area group by id: {Id}, language: {Language}", id, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<AreaGroupDto>(url, _jsonOptions);
+            return await GetWithLanguageAsync<AreaGroupDto>(url, language);
         }
         catch (Exception ex)
         {
@@ -141,10 +138,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/group/{groupId}/areas", language);
-            _logger.LogInformation("Getting areas by group id: {GroupId}", groupId);
+            var url = $"{_settings.BasePath}/info/accesspackages/group/{groupId}/areas";
+            _logger.LogInformation("Getting areas by group id: {GroupId}, language: {Language}", groupId, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<AreaDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<AreaDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -157,10 +154,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/area/{id}", language);
-            _logger.LogInformation("Getting area by id: {Id}", id);
+            var url = $"{_settings.BasePath}/info/accesspackages/area/{id}";
+            _logger.LogInformation("Getting area by id: {Id}, language: {Language}", id, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<AreaDto>(url, _jsonOptions);
+            return await GetWithLanguageAsync<AreaDto>(url, language);
         }
         catch (Exception ex)
         {
@@ -173,10 +170,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/area/{areaId}/packages", language);
-            _logger.LogInformation("Getting packages by area id: {AreaId}", areaId);
+            var url = $"{_settings.BasePath}/info/accesspackages/area/{areaId}/packages";
+            _logger.LogInformation("Getting packages by area id: {AreaId}, language: {Language}", areaId, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<PackageDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<PackageDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -189,10 +186,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/package/{id}", language);
-            _logger.LogInformation("Getting package by id: {Id}", id);
+            var url = $"{_settings.BasePath}/info/accesspackages/package/{id}";
+            _logger.LogInformation("Getting package by id: {Id}, language: {Language}", id, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<PackageDto>(url, _jsonOptions);
+            return await GetWithLanguageAsync<PackageDto>(url, language);
         }
         catch (Exception ex)
         {
@@ -205,10 +202,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/package/urn/{Uri.EscapeDataString(urnValue)}", language);
-            _logger.LogInformation("Getting package by URN: {UrnValue}", urnValue);
+            var url = $"{_settings.BasePath}/info/accesspackages/package/urn/{Uri.EscapeDataString(urnValue)}";
+            _logger.LogInformation("Getting package by URN: {UrnValue}, language: {Language}", urnValue, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<PackageDto>(url, _jsonOptions);
+            return await GetWithLanguageAsync<PackageDto>(url, language);
         }
         catch (Exception ex)
         {
@@ -221,10 +218,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/accesspackages/package/{packageId}/resources", language);
-            _logger.LogInformation("Getting resources by package id: {PackageId}", packageId);
+            var url = $"{_settings.BasePath}/info/accesspackages/package/{packageId}/resources";
+            _logger.LogInformation("Getting resources by package id: {PackageId}, language: {Language}", packageId, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<ResourceDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<ResourceDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -239,10 +236,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/roles", language);
-            _logger.LogInformation("Getting roles from: {Url}", url);
+            var url = $"{_settings.BasePath}/info/roles";
+            _logger.LogInformation("Getting roles from: {Url}, language: {Language}", url, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<RoleDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<RoleDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -255,10 +252,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/info/roles/{id}", language);
-            _logger.LogInformation("Getting role by id: {Id}", id);
+            var url = $"{_settings.BasePath}/info/roles/{id}";
+            _logger.LogInformation("Getting role by id: {Id}, language: {Language}", id, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<RoleDto>(url, _jsonOptions);
+            return await GetWithLanguageAsync<RoleDto>(url, language);
         }
         catch (Exception ex)
         {
@@ -275,12 +272,11 @@ public class AltinnMetadataService : IAltinnMetadataService
             queryParams["role"] = role;
             queryParams["variant"] = variant;
             queryParams["includeResources"] = includeResources.ToString().ToLower();
-            AddLanguageParam(queryParams, language);
 
             var url = $"{_settings.BasePath}/info/roles/packages?{queryParams}";
-            _logger.LogInformation("Getting packages by role: {Role}, variant: {Variant}", role, variant);
+            _logger.LogInformation("Getting packages by role: {Role}, variant: {Variant}, language: {Language}", role, variant, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<PackageDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<PackageDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -297,12 +293,11 @@ public class AltinnMetadataService : IAltinnMetadataService
             queryParams["role"] = role;
             queryParams["variant"] = variant;
             queryParams["includePackageResources"] = includePackageResources.ToString().ToLower();
-            AddLanguageParam(queryParams, language);
 
             var url = $"{_settings.BasePath}/info/roles/resources?{queryParams}";
-            _logger.LogInformation("Getting resources by role: {Role}, variant: {Variant}", role, variant);
+            _logger.LogInformation("Getting resources by role: {Role}, variant: {Variant}, language: {Language}", role, variant, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<ResourceDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<ResourceDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -318,12 +313,11 @@ public class AltinnMetadataService : IAltinnMetadataService
             var queryParams = HttpUtility.ParseQueryString(string.Empty);
             queryParams["variant"] = variant;
             queryParams["includeResources"] = includeResources.ToString().ToLower();
-            AddLanguageParam(queryParams, language);
 
             var url = $"{_settings.BasePath}/info/roles/{roleId}/packages?{queryParams}";
-            _logger.LogInformation("Getting packages by role id: {RoleId}, variant: {Variant}", roleId, variant);
+            _logger.LogInformation("Getting packages by role id: {RoleId}, variant: {Variant}, language: {Language}", roleId, variant, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<PackageDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<PackageDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -339,12 +333,11 @@ public class AltinnMetadataService : IAltinnMetadataService
             var queryParams = HttpUtility.ParseQueryString(string.Empty);
             queryParams["variant"] = variant;
             queryParams["includePackageResources"] = includePackageResources.ToString().ToLower();
-            AddLanguageParam(queryParams, language);
 
             var url = $"{_settings.BasePath}/info/roles/{roleId}/resources?{queryParams}";
-            _logger.LogInformation("Getting resources by role id: {RoleId}, variant: {Variant}", roleId, variant);
+            _logger.LogInformation("Getting resources by role id: {RoleId}, variant: {Variant}, language: {Language}", roleId, variant, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<ResourceDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<ResourceDto>>(url, language);
         }
         catch (Exception ex)
         {
@@ -359,10 +352,10 @@ public class AltinnMetadataService : IAltinnMetadataService
     {
         try
         {
-            var url = BuildUrlWithLanguage($"{_settings.BasePath}/types/organization/subtypes", language);
-            _logger.LogInformation("Getting organization subtypes from: {Url}", url);
+            var url = $"{_settings.BasePath}/types/organization/subtypes";
+            _logger.LogInformation("Getting organization subtypes from: {Url}, language: {Language}", url, language ?? "nb");
 
-            return await _httpClient.GetFromJsonAsync<List<SubTypeDto>>(url, _jsonOptions);
+            return await GetWithLanguageAsync<List<SubTypeDto>>(url, language);
         }
         catch (Exception ex)
         {

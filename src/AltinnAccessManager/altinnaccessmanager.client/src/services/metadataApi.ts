@@ -10,11 +10,13 @@ import type {
 
 const API_BASE = '/api/metadata';
 
-// Helper to add language param
-function addLanguageParam(params: URLSearchParams, language?: string) {
-  if (language) {
-    params.append('language', language);
-  }
+// Helper to create fetch options with Accept-Language header
+function createFetchOptions(language?: string): RequestInit {
+  return {
+    headers: {
+      'Accept-Language': language || 'nb',
+    },
+  };
 }
 
 // Package endpoints
@@ -33,81 +35,62 @@ export async function searchPackages(
   }
   params.append('searchInResources', searchInResources.toString());
   if (typeName) params.append('typeName', typeName);
-  addLanguageParam(params, language);
 
-  const response = await fetch(`${API_BASE}/accesspackages/search?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/search?${params}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to search packages');
   return response.json();
 }
 
 export async function exportAccessPackages(language?: string): Promise<AreaGroupDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/export?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/export`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to export access packages');
   return response.json();
 }
 
 export async function getAreaGroups(language?: string): Promise<AreaGroupDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/group?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/group`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get area groups');
   return response.json();
 }
 
 export async function getAreaGroupById(id: string, language?: string): Promise<AreaGroupDto> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/group/${id}?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/group/${id}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get area group');
   return response.json();
 }
 
 export async function getAreasByGroupId(groupId: string, language?: string): Promise<AreaDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/group/${groupId}/areas?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/group/${groupId}/areas`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get areas');
   return response.json();
 }
 
 export async function getAreaById(id: string, language?: string): Promise<AreaDto> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/area/${id}?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/area/${id}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get area');
   return response.json();
 }
 
 export async function getPackagesByAreaId(areaId: string, language?: string): Promise<PackageDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/area/${areaId}/packages?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/area/${areaId}/packages`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get packages');
   return response.json();
 }
 
 export async function getPackageById(id: string, language?: string): Promise<PackageDto> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/package/${id}?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/package/${id}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get package');
   return response.json();
 }
 
 export async function getPackageByUrn(urnValue: string, language?: string): Promise<PackageDto> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/package/urn/${encodeURIComponent(urnValue)}?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/package/urn/${encodeURIComponent(urnValue)}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get package');
   return response.json();
 }
 
 export async function getResourcesByPackageId(packageId: string, language?: string): Promise<ResourceDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/accesspackages/package/${packageId}/resources?${params}`);
+  const response = await fetch(`${API_BASE}/accesspackages/package/${packageId}/resources`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get resources');
   return response.json();
 }
@@ -115,17 +98,13 @@ export async function getResourcesByPackageId(packageId: string, language?: stri
 // Role endpoints
 
 export async function getRoles(language?: string): Promise<RoleDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/roles?${params}`);
+  const response = await fetch(`${API_BASE}/roles`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get roles');
   return response.json();
 }
 
 export async function getRoleById(id: string, language?: string): Promise<RoleDto> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/roles/${id}?${params}`);
+  const response = await fetch(`${API_BASE}/roles/${id}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get role');
   return response.json();
 }
@@ -141,8 +120,7 @@ export async function getPackagesByRole(
     variant,
     includeResources: includeResources.toString(),
   });
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/roles/packages?${params}`);
+  const response = await fetch(`${API_BASE}/roles/packages?${params}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get packages by role');
   return response.json();
 }
@@ -158,8 +136,7 @@ export async function getResourcesByRole(
     variant,
     includePackageResources: includePackageResources.toString(),
   });
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/roles/resources?${params}`);
+  const response = await fetch(`${API_BASE}/roles/resources?${params}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get resources by role');
   return response.json();
 }
@@ -174,8 +151,7 @@ export async function getPackagesByRoleId(
     variant,
     includeResources: includeResources.toString(),
   });
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/roles/${id}/packages?${params}`);
+  const response = await fetch(`${API_BASE}/roles/${id}/packages?${params}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get packages by role');
   return response.json();
 }
@@ -190,8 +166,7 @@ export async function getResourcesByRoleId(
     variant,
     includePackageResources: includePackageResources.toString(),
   });
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/roles/${id}/resources?${params}`);
+  const response = await fetch(`${API_BASE}/roles/${id}/resources?${params}`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get resources by role');
   return response.json();
 }
@@ -199,9 +174,7 @@ export async function getResourcesByRoleId(
 // Type endpoints
 
 export async function getOrganizationSubTypes(language?: string): Promise<SubTypeDto[]> {
-  const params = new URLSearchParams();
-  addLanguageParam(params, language);
-  const response = await fetch(`${API_BASE}/types/organization/subtypes?${params}`);
+  const response = await fetch(`${API_BASE}/types/organization/subtypes`, createFetchOptions(language));
   if (!response.ok) throw new Error('Failed to get organization subtypes');
   return response.json();
 }

@@ -22,6 +22,28 @@ public class MetadataController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets the Accept-Language header value, defaulting to 'nb' if not present.
+    /// </summary>
+    private string GetLanguage()
+    {
+        var acceptLanguage = Request.Headers.AcceptLanguage.FirstOrDefault();
+        // Parse the first language from the header (e.g., "en-US,en;q=0.9" -> "en")
+        if (!string.IsNullOrEmpty(acceptLanguage))
+        {
+            var firstLang = acceptLanguage.Split(',')[0].Split(';')[0].Trim();
+            if (firstLang.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+                return "en";
+            if (firstLang.StartsWith("nb", StringComparison.OrdinalIgnoreCase) || 
+                firstLang.StartsWith("no", StringComparison.OrdinalIgnoreCase) ||
+                firstLang.StartsWith("nn", StringComparison.OrdinalIgnoreCase))
+                return "nb";
+            // Return the first two characters as language code
+            return firstLang.Length >= 2 ? firstLang[..2].ToLower() : "nb";
+        }
+        return "nb"; // Default to Norwegian
+    }
+
     #region Package Endpoints
 
     /// <summary>
@@ -31,16 +53,15 @@ public class MetadataController : ControllerBase
     /// <param name="resourceProviderCode">Resource provider codes to filter by.</param>
     /// <param name="searchInResources">Whether to search in resources.</param>
     /// <param name="typeName">Type name to filter by.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of matching packages with search metadata.</returns>
     [HttpGet("accesspackages/search")]
     public async Task<ActionResult<List<SearchObjectOfPackageDto>>> SearchPackages(
         [FromQuery] string? term,
         [FromQuery] string[]? resourceProviderCode,
         [FromQuery] bool searchInResources = false,
-        [FromQuery] string? typeName = null,
-        [FromQuery] string? language = null)
+        [FromQuery] string? typeName = null)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Searching packages with term: {Term}, language: {Language}", term, language);
 
         var result = await _metadataService.SearchPackagesAsync(term, resourceProviderCode, searchInResources, typeName, language);
@@ -55,11 +76,11 @@ public class MetadataController : ControllerBase
     /// <summary>
     /// Exports all access packages grouped by area groups.
     /// </summary>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of area groups with all nested data.</returns>
     [HttpGet("accesspackages/export")]
-    public async Task<ActionResult<List<AreaGroupDto>>> ExportAccessPackages([FromQuery] string? language = null)
+    public async Task<ActionResult<List<AreaGroupDto>>> ExportAccessPackages()
     {
+        var language = GetLanguage();
         _logger.LogInformation("Exporting access packages, language: {Language}", language);
 
         var result = await _metadataService.ExportAccessPackagesAsync(language);
@@ -74,11 +95,11 @@ public class MetadataController : ControllerBase
     /// <summary>
     /// Gets all area groups.
     /// </summary>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of area groups.</returns>
     [HttpGet("accesspackages/group")]
-    public async Task<ActionResult<List<AreaGroupDto>>> GetAreaGroups([FromQuery] string? language = null)
+    public async Task<ActionResult<List<AreaGroupDto>>> GetAreaGroups()
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting area groups, language: {Language}", language);
 
         var result = await _metadataService.GetAreaGroupsAsync(language);
@@ -94,11 +115,11 @@ public class MetadataController : ControllerBase
     /// Gets an area group by ID.
     /// </summary>
     /// <param name="id">The area group ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>The area group.</returns>
     [HttpGet("accesspackages/group/{id:guid}")]
-    public async Task<ActionResult<AreaGroupDto>> GetAreaGroupById(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<AreaGroupDto>> GetAreaGroupById(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting area group by id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetAreaGroupByIdAsync(id, language);
@@ -114,11 +135,11 @@ public class MetadataController : ControllerBase
     /// Gets areas for a specific area group.
     /// </summary>
     /// <param name="id">The area group ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of areas in the group.</returns>
     [HttpGet("accesspackages/group/{id:guid}/areas")]
-    public async Task<ActionResult<List<AreaDto>>> GetAreasByGroupId(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<List<AreaDto>>> GetAreasByGroupId(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting areas by group id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetAreasByGroupIdAsync(id, language);
@@ -134,11 +155,11 @@ public class MetadataController : ControllerBase
     /// Gets an area by ID.
     /// </summary>
     /// <param name="id">The area ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>The area.</returns>
     [HttpGet("accesspackages/area/{id:guid}")]
-    public async Task<ActionResult<AreaDto>> GetAreaById(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<AreaDto>> GetAreaById(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting area by id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetAreaByIdAsync(id, language);
@@ -154,11 +175,11 @@ public class MetadataController : ControllerBase
     /// Gets packages for a specific area.
     /// </summary>
     /// <param name="id">The area ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of packages in the area.</returns>
     [HttpGet("accesspackages/area/{id:guid}/packages")]
-    public async Task<ActionResult<List<PackageDto>>> GetPackagesByAreaId(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<List<PackageDto>>> GetPackagesByAreaId(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting packages by area id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetPackagesByAreaIdAsync(id, language);
@@ -174,11 +195,11 @@ public class MetadataController : ControllerBase
     /// Gets a package by ID.
     /// </summary>
     /// <param name="id">The package ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>The package.</returns>
     [HttpGet("accesspackages/package/{id:guid}")]
-    public async Task<ActionResult<PackageDto>> GetPackageById(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<PackageDto>> GetPackageById(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting package by id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetPackageByIdAsync(id, language);
@@ -194,11 +215,11 @@ public class MetadataController : ControllerBase
     /// Gets a package by URN.
     /// </summary>
     /// <param name="urnValue">The package URN.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>The package.</returns>
     [HttpGet("accesspackages/package/urn/{urnValue}")]
-    public async Task<ActionResult<PackageDto>> GetPackageByUrn(string urnValue, [FromQuery] string? language = null)
+    public async Task<ActionResult<PackageDto>> GetPackageByUrn(string urnValue)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting package by URN: {UrnValue}, language: {Language}", urnValue, language);
 
         var result = await _metadataService.GetPackageByUrnAsync(urnValue, language);
@@ -214,11 +235,11 @@ public class MetadataController : ControllerBase
     /// Gets resources for a specific package.
     /// </summary>
     /// <param name="id">The package ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of resources in the package.</returns>
     [HttpGet("accesspackages/package/{id:guid}/resources")]
-    public async Task<ActionResult<List<ResourceDto>>> GetResourcesByPackageId(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<List<ResourceDto>>> GetResourcesByPackageId(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting resources by package id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetResourcesByPackageIdAsync(id, language);
@@ -237,11 +258,11 @@ public class MetadataController : ControllerBase
     /// <summary>
     /// Gets all roles.
     /// </summary>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of roles.</returns>
     [HttpGet("roles")]
-    public async Task<ActionResult<List<RoleDto>>> GetRoles([FromQuery] string? language = null)
+    public async Task<ActionResult<List<RoleDto>>> GetRoles()
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting all roles, language: {Language}", language);
 
         var result = await _metadataService.GetRolesAsync(language);
@@ -257,11 +278,11 @@ public class MetadataController : ControllerBase
     /// Gets a role by ID.
     /// </summary>
     /// <param name="id">The role ID.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>The role.</returns>
     [HttpGet("roles/{id:guid}")]
-    public async Task<ActionResult<RoleDto>> GetRoleById(Guid id, [FromQuery] string? language = null)
+    public async Task<ActionResult<RoleDto>> GetRoleById(Guid id)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting role by id: {Id}, language: {Language}", id, language);
 
         var result = await _metadataService.GetRoleByIdAsync(id, language);
@@ -279,15 +300,14 @@ public class MetadataController : ControllerBase
     /// <param name="role">The role code.</param>
     /// <param name="variant">The role variant.</param>
     /// <param name="includeResources">Whether to include resources.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of packages for the role.</returns>
     [HttpGet("roles/packages")]
     public async Task<ActionResult<List<PackageDto>>> GetPackagesByRole(
         [FromQuery] string role,
         [FromQuery] string variant,
-        [FromQuery] bool includeResources = false,
-        [FromQuery] string? language = null)
+        [FromQuery] bool includeResources = false)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting packages by role: {Role}, variant: {Variant}, language: {Language}", role, variant, language);
 
         var result = await _metadataService.GetPackagesByRoleAsync(role, variant, includeResources, language);
@@ -305,15 +325,14 @@ public class MetadataController : ControllerBase
     /// <param name="role">The role code.</param>
     /// <param name="variant">The role variant.</param>
     /// <param name="includePackageResources">Whether to include package resources.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of resources for the role.</returns>
     [HttpGet("roles/resources")]
     public async Task<ActionResult<List<ResourceDto>>> GetResourcesByRole(
         [FromQuery] string role,
         [FromQuery] string variant,
-        [FromQuery] bool includePackageResources = false,
-        [FromQuery] string? language = null)
+        [FromQuery] bool includePackageResources = false)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting resources by role: {Role}, variant: {Variant}, language: {Language}", role, variant, language);
 
         var result = await _metadataService.GetResourcesByRoleAsync(role, variant, includePackageResources, language);
@@ -331,15 +350,14 @@ public class MetadataController : ControllerBase
     /// <param name="id">The role ID.</param>
     /// <param name="variant">The role variant.</param>
     /// <param name="includeResources">Whether to include resources.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of packages for the role.</returns>
     [HttpGet("roles/{id:guid}/packages")]
     public async Task<ActionResult<List<PackageDto>>> GetPackagesByRoleId(
         Guid id,
         [FromQuery] string variant,
-        [FromQuery] bool includeResources = false,
-        [FromQuery] string? language = null)
+        [FromQuery] bool includeResources = false)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting packages by role id: {Id}, variant: {Variant}, language: {Language}", id, variant, language);
 
         var result = await _metadataService.GetPackagesByRoleIdAsync(id, variant, includeResources, language);
@@ -357,15 +375,14 @@ public class MetadataController : ControllerBase
     /// <param name="id">The role ID.</param>
     /// <param name="variant">The role variant.</param>
     /// <param name="includePackageResources">Whether to include package resources.</param>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of resources for the role.</returns>
     [HttpGet("roles/{id:guid}/resources")]
     public async Task<ActionResult<List<ResourceDto>>> GetResourcesByRoleId(
         Guid id,
         [FromQuery] string variant,
-        [FromQuery] bool includePackageResources = false,
-        [FromQuery] string? language = null)
+        [FromQuery] bool includePackageResources = false)
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting resources by role id: {Id}, variant: {Variant}, language: {Language}", id, variant, language);
 
         var result = await _metadataService.GetResourcesByRoleIdAsync(id, variant, includePackageResources, language);
@@ -384,11 +401,11 @@ public class MetadataController : ControllerBase
     /// <summary>
     /// Gets all organization subtypes.
     /// </summary>
-    /// <param name="language">Language code (e.g., 'en', 'nb').</param>
     /// <returns>List of organization subtypes.</returns>
     [HttpGet("types/organization/subtypes")]
-    public async Task<ActionResult<List<SubTypeDto>>> GetOrganizationSubTypes([FromQuery] string? language = null)
+    public async Task<ActionResult<List<SubTypeDto>>> GetOrganizationSubTypes()
     {
+        var language = GetLanguage();
         _logger.LogInformation("Getting organization subtypes, language: {Language}", language);
 
         var result = await _metadataService.GetOrganizationSubTypesAsync(language);
