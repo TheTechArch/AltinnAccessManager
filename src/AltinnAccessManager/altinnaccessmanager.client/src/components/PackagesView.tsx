@@ -2,12 +2,14 @@
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
 import type { AreaGroupDto, AreaDto, PackageDto } from '../types/metadata';
 import { exportAccessPackages, getPackageById } from '../services/metadataApi';
+import { useEnvironment } from '../context/EnvironmentContext';
 
 interface PackagesViewProps {
   language?: string;
+  environment?: string;
 }
 
-export function PackagesView({ language }: PackagesViewProps) {
+export function PackagesView({ language, environment }: PackagesViewProps) {
 const [areaGroups, setAreaGroups] = useState<AreaGroupDto[]>([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
@@ -16,16 +18,17 @@ const [selectedArea, setSelectedArea] = useState<AreaDto | null>(null);
 const [selectedPackage, setSelectedPackage] = useState<PackageDto | null>(null);
 const [loadingPackage, setLoadingPackage] = useState(false);
 const [searchTerm, setSearchTerm] = useState('');
+const { getResourceRegistryBaseUrl } = useEnvironment();
 
 useEffect(() => {
   loadData();
-}, [language]);
+}, [language, environment]);
 
 const loadData = async () => {
   try {
     setLoading(true);
     // Use export endpoint which returns the full hierarchy (groups -> areas -> packages)
-    const data = await exportAccessPackages(language);
+    const data = await exportAccessPackages(language, environment);
     setAreaGroups(data);
   } catch (err) {
     setError(err instanceof Error ? err.message : 'Failed to load access packages');
@@ -50,7 +53,7 @@ const handlePackageClick = async (pkg: PackageDto) => {
   setLoadingPackage(true);
   setSelectedPackage(pkg); // Show basic info immediately
   try {
-    const fullPackage = await getPackageById(pkg.id, language);
+    const fullPackage = await getPackageById(pkg.id, language, environment);
     setSelectedPackage(fullPackage);
   } catch (err) {
     console.error('Failed to load package details:', err);
@@ -67,6 +70,8 @@ const handlePackageClick = async (pkg: PackageDto) => {
       area.packages?.some(pkg => pkg.name?.toLowerCase().includes(searchTerm.toLowerCase()))
     )
   );
+
+  const resourceRegistryBaseUrl = getResourceRegistryBaseUrl();
 
   if (loading) {
     return (
@@ -316,7 +321,7 @@ const handlePackageClick = async (pkg: PackageDto) => {
                           {resource.refId && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               <a
-                                href={`https://platform.tt02.altinn.no/resourceregistry/api/v1/Resource/${resource.refId}`}
+                                href={`${resourceRegistryBaseUrl}/${resource.refId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-block"
@@ -326,7 +331,7 @@ const handlePackageClick = async (pkg: PackageDto) => {
                                 </Tag>
                               </a>
                               <a
-                                href={`https://platform.tt02.altinn.no/resourceregistry/api/v1/Resource/${resource.refId}/policy`}
+                                href={`${resourceRegistryBaseUrl}/${resource.refId}/policy`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-block"
@@ -336,7 +341,7 @@ const handlePackageClick = async (pkg: PackageDto) => {
                                 </Tag>
                               </a>
                               <a
-                                href={`https://platform.tt02.altinn.no/resourceregistry/api/v1/Resource/${resource.refId}/policy/rules`}
+                                href={`${resourceRegistryBaseUrl}/${resource.refId}/policy/rules`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-block"

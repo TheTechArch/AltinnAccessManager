@@ -44,6 +44,20 @@ public class MetadataController : ControllerBase
         return "nb"; // Default to Norwegian
     }
 
+    /// <summary>
+    /// Gets the X-Altinn-Environment header value, defaulting to 'tt02' if not present.
+    /// </summary>
+    private string GetEnvironment()
+    {
+        var environment = Request.Headers["X-Altinn-Environment"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(environment) && 
+            string.Equals(environment, "prod", StringComparison.OrdinalIgnoreCase))
+        {
+            return "prod";
+        }
+        return "tt02"; // Default to TT02
+    }
+
     #region Package Endpoints
 
     /// <summary>
@@ -62,9 +76,10 @@ public class MetadataController : ControllerBase
         [FromQuery] string? typeName = null)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Searching packages with term: {Term}, language: {Language}", term, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Searching packages with term: {Term}, language: {Language}, environment: {Environment}", term, language, environment);
 
-        var result = await _metadataService.SearchPackagesAsync(term, resourceProviderCode, searchInResources, typeName, language);
+        var result = await _metadataService.SearchPackagesAsync(term, resourceProviderCode, searchInResources, typeName, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -81,9 +96,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<AreaGroupDto>>> ExportAccessPackages()
     {
         var language = GetLanguage();
-        _logger.LogInformation("Exporting access packages, language: {Language}", language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Exporting access packages, language: {Language}, environment: {Environment}", language, environment);
 
-        var result = await _metadataService.ExportAccessPackagesAsync(language);
+        var result = await _metadataService.ExportAccessPackagesAsync(language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -100,9 +116,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<AreaGroupDto>>> GetAreaGroups()
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting area groups, language: {Language}", language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting area groups, language: {Language}, environment: {Environment}", language, environment);
 
-        var result = await _metadataService.GetAreaGroupsAsync(language);
+        var result = await _metadataService.GetAreaGroupsAsync(language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -120,9 +137,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<AreaGroupDto>> GetAreaGroupById(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting area group by id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting area group by id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetAreaGroupByIdAsync(id, language);
+        var result = await _metadataService.GetAreaGroupByIdAsync(id, language, environment);
         if (result == null)
         {
             return NotFound($"Area group with id {id} not found");
@@ -140,9 +158,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<AreaDto>>> GetAreasByGroupId(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting areas by group id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting areas by group id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetAreasByGroupIdAsync(id, language);
+        var result = await _metadataService.GetAreasByGroupIdAsync(id, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -160,9 +179,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<AreaDto>> GetAreaById(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting area by id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting area by id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetAreaByIdAsync(id, language);
+        var result = await _metadataService.GetAreaByIdAsync(id, language, environment);
         if (result == null)
         {
             return NotFound($"Area with id {id} not found");
@@ -180,9 +200,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<PackageDto>>> GetPackagesByAreaId(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting packages by area id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting packages by area id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetPackagesByAreaIdAsync(id, language);
+        var result = await _metadataService.GetPackagesByAreaIdAsync(id, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -200,9 +221,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<PackageDto>> GetPackageById(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting package by id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting package by id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetPackageByIdAsync(id, language);
+        var result = await _metadataService.GetPackageByIdAsync(id, language, environment);
         if (result == null)
         {
             return NotFound($"Package with id {id} not found");
@@ -220,9 +242,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<PackageDto>> GetPackageByUrn(string urnValue)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting package by URN: {UrnValue}, language: {Language}", urnValue, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting package by URN: {UrnValue}, language: {Language}, environment: {Environment}", urnValue, language, environment);
 
-        var result = await _metadataService.GetPackageByUrnAsync(urnValue, language);
+        var result = await _metadataService.GetPackageByUrnAsync(urnValue, language, environment);
         if (result == null)
         {
             return NotFound($"Package with URN {urnValue} not found");
@@ -240,9 +263,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<ResourceDto>>> GetResourcesByPackageId(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting resources by package id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting resources by package id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetResourcesByPackageIdAsync(id, language);
+        var result = await _metadataService.GetResourcesByPackageIdAsync(id, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -263,9 +287,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<RoleDto>>> GetRoles()
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting all roles, language: {Language}", language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting all roles, language: {Language}, environment: {Environment}", language, environment);
 
-        var result = await _metadataService.GetRolesAsync(language);
+        var result = await _metadataService.GetRolesAsync(language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -283,9 +308,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<RoleDto>> GetRoleById(Guid id)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting role by id: {Id}, language: {Language}", id, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting role by id: {Id}, language: {Language}, environment: {Environment}", id, language, environment);
 
-        var result = await _metadataService.GetRoleByIdAsync(id, language);
+        var result = await _metadataService.GetRoleByIdAsync(id, language, environment);
         if (result == null)
         {
             return NotFound($"Role with id {id} not found");
@@ -308,9 +334,10 @@ public class MetadataController : ControllerBase
         [FromQuery] bool includeResources = false)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting packages by role: {Role}, variant: {Variant}, language: {Language}", role, variant, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting packages by role: {Role}, variant: {Variant}, language: {Language}, environment: {Environment}", role, variant, language, environment);
 
-        var result = await _metadataService.GetPackagesByRoleAsync(role, variant, includeResources, language);
+        var result = await _metadataService.GetPackagesByRoleAsync(role, variant, includeResources, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -333,9 +360,10 @@ public class MetadataController : ControllerBase
         [FromQuery] bool includePackageResources = false)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting resources by role: {Role}, variant: {Variant}, language: {Language}", role, variant, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting resources by role: {Role}, variant: {Variant}, language: {Language}, environment: {Environment}", role, variant, language, environment);
 
-        var result = await _metadataService.GetResourcesByRoleAsync(role, variant, includePackageResources, language);
+        var result = await _metadataService.GetResourcesByRoleAsync(role, variant, includePackageResources, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -358,9 +386,10 @@ public class MetadataController : ControllerBase
         [FromQuery] bool includeResources = false)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting packages by role id: {Id}, variant: {Variant}, language: {Language}", id, variant, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting packages by role id: {Id}, variant: {Variant}, language: {Language}, environment: {Environment}", id, variant, language, environment);
 
-        var result = await _metadataService.GetPackagesByRoleIdAsync(id, variant, includeResources, language);
+        var result = await _metadataService.GetPackagesByRoleIdAsync(id, variant, includeResources, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -383,9 +412,10 @@ public class MetadataController : ControllerBase
         [FromQuery] bool includePackageResources = false)
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting resources by role id: {Id}, variant: {Variant}, language: {Language}", id, variant, language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting resources by role id: {Id}, variant: {Variant}, language: {Language}, environment: {Environment}", id, variant, language, environment);
 
-        var result = await _metadataService.GetResourcesByRoleIdAsync(id, variant, includePackageResources, language);
+        var result = await _metadataService.GetResourcesByRoleIdAsync(id, variant, includePackageResources, language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");
@@ -406,9 +436,10 @@ public class MetadataController : ControllerBase
     public async Task<ActionResult<List<SubTypeDto>>> GetOrganizationSubTypes()
     {
         var language = GetLanguage();
-        _logger.LogInformation("Getting organization subtypes, language: {Language}", language);
+        var environment = GetEnvironment();
+        _logger.LogInformation("Getting organization subtypes, language: {Language}, environment: {Environment}", language, environment);
 
-        var result = await _metadataService.GetOrganizationSubTypesAsync(language);
+        var result = await _metadataService.GetOrganizationSubTypesAsync(language, environment);
         if (result == null)
         {
             return StatusCode(502, "Failed to retrieve data from Altinn Metadata API");

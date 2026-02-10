@@ -5,9 +5,10 @@ import { getRoles } from '../services/metadataApi';
 
 interface RolesViewProps {
   language?: string;
+  environment?: string;
 }
 
-export function RolesView({ language }: RolesViewProps) {
+export function RolesView({ language, environment }: RolesViewProps) {
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,12 +18,12 @@ export function RolesView({ language }: RolesViewProps) {
 
   useEffect(() => {
     loadRoles();
-  }, [language]);
+  }, [language, environment]);
 
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const data = await getRoles(language);
+      const data = await getRoles(language, environment);
       setRoles(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load roles');

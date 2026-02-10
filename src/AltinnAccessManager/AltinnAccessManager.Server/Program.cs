@@ -27,8 +27,9 @@ builder.Services.AddHttpClient<IIdPortenService, IdPortenService>();
 // Register Altinn Authentication service with HttpClient
 builder.Services.AddHttpClient<IAltinnAuthenticationService, AltinnAuthenticationService>();
 
-// Register Altinn Metadata service with HttpClient
-builder.Services.AddHttpClient<IAltinnMetadataService, AltinnMetadataService>();
+// Register HttpClient factory for Altinn Metadata service (supports multiple environments)
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IAltinnMetadataService, AltinnMetadataService>();
 
 // Register Client Admin service with HttpClient
 builder.Services.AddHttpClient<IClientAdminService, ClientAdminService>();

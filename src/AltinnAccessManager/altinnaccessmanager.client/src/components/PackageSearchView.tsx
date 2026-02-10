@@ -5,9 +5,10 @@ import { searchPackages, getPackageById } from '../services/metadataApi';
 
 interface PackageSearchViewProps {
   language?: string;
+  environment?: string;
 }
 
-export function PackageSearchView({ language }: PackageSearchViewProps) {
+export function PackageSearchView({ language, environment }: PackageSearchViewProps) {
   const [results, setResults] = useState<SearchObjectOfPackageDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export function PackageSearchView({ language }: PackageSearchViewProps) {
       setError(null);
       setHasSearched(true);
       setSelectedPackage(null);
-      const data = await searchPackages(searchTerm, undefined, searchInResources, undefined, language);
+      const data = await searchPackages(searchTerm, undefined, searchInResources, undefined, language, environment);
       setResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -45,7 +46,7 @@ export function PackageSearchView({ language }: PackageSearchViewProps) {
     // Fetch full package details including resources
     setLoadingPackage(true);
     try {
-      const fullPackage = await getPackageById(packageId, language);
+      const fullPackage = await getPackageById(packageId, language, environment);
       setSelectedPackage(fullPackage);
     } catch (err) {
       console.error('Failed to load package details:', err);

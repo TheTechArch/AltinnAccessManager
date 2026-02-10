@@ -5,9 +5,10 @@ import { getOrganizationSubTypes } from '../services/metadataApi';
 
 interface OrganizationTypesViewProps {
   language?: string;
+  environment?: string;
 }
 
-export function OrganizationTypesView({ language }: OrganizationTypesViewProps) {
+export function OrganizationTypesView({ language, environment }: OrganizationTypesViewProps) {
   const [subTypes, setSubTypes] = useState<SubTypeDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,12 +16,12 @@ export function OrganizationTypesView({ language }: OrganizationTypesViewProps) 
 
   useEffect(() => {
     loadSubTypes();
-  }, [language]);
+  }, [language, environment]);
 
   const loadSubTypes = async () => {
     try {
       setLoading(true);
-      const data = await getOrganizationSubTypes(language);
+      const data = await getOrganizationSubTypes(language, environment);
       setSubTypes(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load organization subtypes');

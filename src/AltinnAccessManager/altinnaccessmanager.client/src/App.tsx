@@ -6,7 +6,9 @@ import { OrganizationTypesView } from './components/OrganizationTypesView'
 import { PackageSearchView } from './components/PackageSearchView'
 import { ClientAdminDashboard } from './components/ClientAdminDashboard'
 import { LanguageProvider, useLanguage } from './context/LanguageContext'
+import { EnvironmentProvider, useEnvironment } from './context/EnvironmentContext'
 import { LanguageSelector } from './components/LanguageSelector'
+import { EnvironmentSelector } from './components/EnvironmentSelector'
 
 type View = 'home' | 'packages' | 'search' | 'roles' | 'types' | 'clientadmin';
 
@@ -18,6 +20,7 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('home');
   const { language, t } = useLanguage();
+  const { environment } = useEnvironment();
   
   // Track last user activity time
   const lastActivityRef = useRef<number>(Date.now());
@@ -128,13 +131,13 @@ function AppContent() {
   const renderContent = () => {
     switch (currentView) {
       case 'packages':
-        return <PackagesView language={language} />;
+        return <PackagesView language={language} environment={environment} />;
       case 'search':
-        return <PackageSearchView language={language} />;
+        return <PackageSearchView language={language} environment={environment} />;
       case 'roles':
-        return <RolesView language={language} />;
+        return <RolesView language={language} environment={environment} />;
       case 'types':
-        return <OrganizationTypesView language={language} />;
+        return <OrganizationTypesView language={language} environment={environment} />;
       case 'clientadmin':
         return <ClientAdminDashboard isAuthenticated={isAuthenticated} onLogin={handleLogin} />;
       default:
@@ -487,6 +490,7 @@ console.log(roles);`}</pre>
             >
               {t('header.clientAdmin')}
             </button>
+            <EnvironmentSelector />
             <LanguageSelector />
             {!isLoading && (
               isAuthenticated ? (
@@ -512,7 +516,9 @@ console.log(roles);`}</pre>
 function App() {
   return (
     <LanguageProvider>
-      <AppContent />
+      <EnvironmentProvider>
+        <AppContent />
+      </EnvironmentProvider>
     </LanguageProvider>
   );
 }
