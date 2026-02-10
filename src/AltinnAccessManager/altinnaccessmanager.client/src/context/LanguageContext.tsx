@@ -10,7 +10,6 @@ interface LanguageContextType {
 
 const translations: Record<Language, Record<string, string>> = {
   en: {
-    // Header
     'header.title': 'Altinn Access Manager',
     'header.packages': 'Packages',
     'header.search': 'Search',
@@ -19,16 +18,12 @@ const translations: Record<Language, Record<string, string>> = {
     'header.clientAdmin': 'Client Admin',
     'header.login': 'Login with ID-porten',
     'header.logout': 'Log out',
-    
-    // Home page
     'home.tagline': 'Reference Implementation',
     'home.title': 'The Ultimate Access Management Tool',
     'home.subtitle': 'Explore and showcase the Altinn Authorization API with this comprehensive reference implementation. Manage roles, delegations, consents, and system users with ease.',
     'home.browsePackages': 'Browse Packages',
     'home.viewRoles': 'View Roles',
     'home.exploreMetadata': 'Explore Metadata',
-    
-    // Cards
     'card.accessPackages': 'Access Packages',
     'card.accessPackages.desc': 'Browse packages organized by area groups and areas.',
     'card.searchPackages': 'Search Packages',
@@ -40,12 +35,8 @@ const translations: Record<Language, Record<string, string>> = {
     'card.clientAdmin': 'Client Admin',
     'card.clientAdmin.desc': 'Manage client delegations and agents for your organization.',
     'card.new': 'New',
-    
-    // Features
     'features.title': 'Showcase Authorization API Features',
     'features.subtitle': 'This reference implementation demonstrates all major capabilities of the Altinn Authorization API.',
-    
-    // Common
     'common.loading': 'Loading...',
     'common.error': 'Error',
     'common.back': 'Back',
@@ -55,36 +46,29 @@ const translations: Record<Language, Record<string, string>> = {
     'common.add': 'Add',
     'common.search': 'Search',
     'common.noResults': 'No results found',
-    
-    // Language
     'language.select': 'Language',
     'language.en': 'English',
     'language.nb': 'Norwegian',
   },
   nb: {
-    // Header
     'header.title': 'Altinn Tilgangsadministrasjon',
     'header.packages': 'Pakker',
-    'header.search': 'Søk',
+    'header.search': 'S\u00f8k',
     'header.roles': 'Roller',
     'header.types': 'Typer',
     'header.clientAdmin': 'Klientadmin',
     'header.login': 'Logg inn med ID-porten',
     'header.logout': 'Logg ut',
-    
-    // Home page
     'home.tagline': 'Referanseimplementasjon',
-    'home.title': 'Det ultimate verktøy for tilgangsstyring',
+    'home.title': 'Det ultimate verkt\u00f8y for tilgangsstyring',
     'home.subtitle': 'Utforsk og vis frem Altinn Autorisasjons-API med denne omfattende referanseimplementasjonen. Administrer roller, delegeringer, samtykker og systembrukere med letthet.',
     'home.browsePackages': 'Bla i pakker',
     'home.viewRoles': 'Se roller',
     'home.exploreMetadata': 'Utforsk metadata',
-    
-    // Cards
     'card.accessPackages': 'Tilgangspakker',
-    'card.accessPackages.desc': 'Bla gjennom pakker organisert etter områdegrupper og områder.',
-    'card.searchPackages': 'Søk etter pakker',
-    'card.searchPackages.desc': 'Søk etter pakker etter navn eller beskrivelse.',
+    'card.accessPackages.desc': 'Bla gjennom pakker organisert etter omr\u00e5degrupper og omr\u00e5der.',
+    'card.searchPackages': 'S\u00f8k etter pakker',
+    'card.searchPackages.desc': 'S\u00f8k etter pakker etter navn eller beskrivelse.',
     'card.roles': 'Roller',
     'card.roles.desc': 'Se alle tilgjengelige roller i autorisasjonssystemet.',
     'card.organizationTypes': 'Organisasjonstyper',
@@ -92,12 +76,8 @@ const translations: Record<Language, Record<string, string>> = {
     'card.clientAdmin': 'Klientadmin',
     'card.clientAdmin.desc': 'Administrer klientdelegeringer og agenter for din organisasjon.',
     'card.new': 'Ny',
-    
-    // Features
     'features.title': 'Vis frem autorisasjons-API-funksjoner',
     'features.subtitle': 'Denne referanseimplementasjonen demonstrerer alle hovedfunksjonene i Altinn Autorisasjons-API.',
-    
-    // Common
     'common.loading': 'Laster...',
     'common.error': 'Feil',
     'common.back': 'Tilbake',
@@ -105,11 +85,9 @@ const translations: Record<Language, Record<string, string>> = {
     'common.cancel': 'Avbryt',
     'common.delete': 'Slett',
     'common.add': 'Legg til',
-    'common.search': 'Sok',
+    'common.search': 'S\u00f8k',
     'common.noResults': 'Ingen resultater funnet',
-    
-    // Language
-    'language.select': 'Sprak',
+    'language.select': 'Spr\u00e5k',
     'language.en': 'Engelsk',
     'language.nb': 'Norsk',
   },
@@ -119,7 +97,6 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
-    // Try to get from localStorage, default to 'nb' (Norwegian)
     const saved = localStorage.getItem('language');
     return (saved === 'en' || saved === 'nb') ? saved : 'nb';
   });
