@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
 import type { SubTypeDto } from '../types/metadata';
 import { getOrganizationSubTypes } from '../services/metadataApi';
@@ -14,13 +14,10 @@ export function OrganizationTypesView({ language, environment }: OrganizationTyp
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    loadSubTypes();
-  }, [language, environment]);
-
-  const loadSubTypes = async () => {
+  const loadSubTypes = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await getOrganizationSubTypes(language, environment);
       setSubTypes(data);
     } catch (err) {
@@ -28,7 +25,11 @@ export function OrganizationTypesView({ language, environment }: OrganizationTyp
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, environment]);
+
+  useEffect(() => {
+    loadSubTypes();
+  }, [loadSubTypes]);
 
   const filteredSubTypes = subTypes.filter(subType =>
     subType.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

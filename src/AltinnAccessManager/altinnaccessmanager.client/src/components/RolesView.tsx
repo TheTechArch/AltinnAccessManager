@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
 import type { RoleDto } from '../types/metadata';
 import { getRoles } from '../services/metadataApi';
@@ -16,13 +16,11 @@ export function RolesView({ language, environment }: RolesViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKeyRoles, setFilterKeyRoles] = useState(false);
 
-  useEffect(() => {
-    loadRoles();
-  }, [language, environment]);
-
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+      setSelectedRole(null);
       const data = await getRoles(language, environment);
       setRoles(data);
     } catch (err) {
@@ -30,7 +28,11 @@ export function RolesView({ language, environment }: RolesViewProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, environment]);
+
+  useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
 
   const filteredRoles = roles.filter(role => {
     const matchesSearch =

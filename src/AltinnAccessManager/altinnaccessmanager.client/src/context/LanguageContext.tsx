@@ -65,7 +65,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Header
     'header.title': 'Altinn Tilgangsadministrasjon',
     'header.packages': 'Pakker',
-    'header.search': 'Søk',
+    'header.search': 'Sok',
     'header.roles': 'Roller',
     'header.types': 'Typer',
     'header.clientAdmin': 'Klientadmin',
@@ -74,7 +74,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Home page
     'home.tagline': 'Referanseimplementasjon',
-    'home.title': 'Det ultimate verktøy for tilgangsstyring',
+    'home.title': 'Det ultimate verktoy for tilgangsstyring',
     'home.subtitle': 'Utforsk og vis frem Altinn Autorisasjons-API med denne omfattende referanseimplementasjonen. Administrer roller, delegeringer, samtykker og systembrukere med letthet.',
     'home.browsePackages': 'Bla i pakker',
     'home.viewRoles': 'Se roller',
@@ -82,9 +82,9 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Cards
     'card.accessPackages': 'Tilgangspakker',
-    'card.accessPackages.desc': 'Bla gjennom pakker organisert etter områdegrupper og områder.',
-    'card.searchPackages': 'Søk etter pakker',
-    'card.searchPackages.desc': 'Søk etter pakker etter navn eller beskrivelse.',
+    'card.accessPackages.desc': 'Bla gjennom pakker organisert etter omradegrupper og omrader.',
+    'card.searchPackages': 'Sok etter pakker',
+    'card.searchPackages.desc': 'Sok etter pakker etter navn eller beskrivelse.',
     'card.roles': 'Roller',
     'card.roles.desc': 'Se alle tilgjengelige roller i autorisasjonssystemet.',
     'card.organizationTypes': 'Organisasjonstyper',

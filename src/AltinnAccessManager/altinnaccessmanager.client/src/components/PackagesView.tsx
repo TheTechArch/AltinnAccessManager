@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
 import type { AreaGroupDto, AreaDto, PackageDto } from '../types/metadata';
 import { exportAccessPackages, getPackageById } from '../services/metadataApi';
@@ -20,13 +20,14 @@ const [loadingPackage, setLoadingPackage] = useState(false);
 const [searchTerm, setSearchTerm] = useState('');
 const { getResourceRegistryBaseUrl } = useEnvironment();
 
-useEffect(() => {
-  loadData();
-}, [language, environment]);
-
-const loadData = async () => {
+const loadData = useCallback(async () => {
   try {
     setLoading(true);
+    setError(null);
+    // Reset selections when reloading
+    setSelectedGroup(null);
+    setSelectedArea(null);
+    setSelectedPackage(null);
     // Use export endpoint which returns the full hierarchy (groups -> areas -> packages)
     const data = await exportAccessPackages(language, environment);
     setAreaGroups(data);
@@ -35,7 +36,11 @@ const loadData = async () => {
   } finally {
     setLoading(false);
   }
-};
+}, [language, environment]);
+
+useEffect(() => {
+  loadData();
+}, [loadData]);
 
 const handleAreaClick = (area: AreaDto) => {
   setSelectedArea(area);
