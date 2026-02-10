@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Card, Heading, Paragraph, Spinner, Tag, Textfield, Button } from '@digdir/designsystemet-react';
 import type { AreaGroupDto, AreaDto, PackageDto } from '../types/metadata';
 import { exportAccessPackages, getPackageById } from '../services/metadataApi';
@@ -312,6 +312,41 @@ const handlePackageClick = async (pkg: PackageDto) => {
                               {resource.refId}
                             </code>
                           )}
+                          {/* Resource Registry Links */}
+                          {resource.refId && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <a
+                                href={`https://platform.tt02.altinn.no/resourceregistry/api/v1/Resource/${resource.refId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block"
+                              >
+                                <Tag data-size="sm" data-color="first" className="cursor-pointer hover:opacity-80">
+                                  Definition
+                                </Tag>
+                              </a>
+                              <a
+                                href={`https://platform.tt02.altinn.no/resourceregistry/api/v1/Resource/${resource.refId}/policy`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block"
+                              >
+                                <Tag data-size="sm" data-color="second" className="cursor-pointer hover:opacity-80">
+                                  Policy
+                                </Tag>
+                              </a>
+                              <a
+                                href={`https://platform.tt02.altinn.no/resourceregistry/api/v1/Resource/${resource.refId}/policy/rules`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block"
+                              >
+                                <Tag data-size="sm" data-color="third" className="cursor-pointer hover:opacity-80">
+                                  Rules
+                                </Tag>
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Card>
@@ -332,3 +367,5 @@ const handlePackageClick = async (pkg: PackageDto) => {
     </div>
   );
 }
+
+
