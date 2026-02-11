@@ -24,6 +24,9 @@ builder.Services.Configure<AltinnClientAdminSettings>(builder.Configuration.GetS
 // Configure Altinn Authorized Parties settings
 builder.Services.Configure<AltinnAuthorizedPartiesSettings>(builder.Configuration.GetSection("AltinnAuthorizedParties"));
 
+// Configure Altinn Connections settings
+builder.Services.Configure<AltinnConnectionsSettings>(builder.Configuration.GetSection("AltinnConnections"));
+
 // Register ID-porten service with HttpClient
 builder.Services.AddHttpClient<IIdPortenService, IdPortenService>();
 
@@ -39,6 +42,9 @@ builder.Services.AddHttpClient<IClientAdminService, ClientAdminService>();
 
 // Register Authorized Parties service with HttpClient
 builder.Services.AddHttpClient<IAuthorizedPartiesService, AuthorizedPartiesService>();
+
+// Register Connections service with HttpClient
+builder.Services.AddHttpClient<IConnectionsService, ConnectionsService>();
 
 var app = builder.Build();
 

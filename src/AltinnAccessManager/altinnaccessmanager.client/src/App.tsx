@@ -5,12 +5,13 @@ import { RolesView } from './components/RolesView'
 import { OrganizationTypesView } from './components/OrganizationTypesView'
 import { PackageSearchView } from './components/PackageSearchView'
 import { ClientAdminDashboard } from './components/ClientAdminDashboard'
+import { ConnectionsDashboard } from './components/ConnectionsDashboard'
 import { LanguageProvider, useLanguage } from './context/LanguageContext'
 import { EnvironmentProvider, useEnvironment } from './context/EnvironmentContext'
 import { LanguageSelector } from './components/LanguageSelector'
 import { EnvironmentSelector } from './components/EnvironmentSelector'
 
-type View = 'home' | 'packages' | 'search' | 'roles' | 'types' | 'clientadmin';
+type View = 'home' | 'packages' | 'search' | 'roles' | 'types' | 'clientadmin' | 'connections';
 
 // Inactivity timeout: 30 minutes without activity means we don't refresh tokens
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
@@ -166,6 +167,8 @@ function AppContent() {
         return <OrganizationTypesView language={language} environment={environment} />;
       case 'clientadmin':
         return <ClientAdminDashboard isAuthenticated={isAuthenticated} onLogin={handleLogin} />;
+      case 'connections':
+        return <ConnectionsDashboard isAuthenticated={isAuthenticated} onLogin={handleLogin} />;
       default:
         return renderHomePage();
     }
@@ -278,6 +281,23 @@ function AppContent() {
               <Heading level={3} data-size="sm" className="mb-2">{t('card.clientAdmin')}</Heading>
               <Paragraph data-size="sm" className="text-gray-600">
                 {t('card.clientAdmin.desc')}
+              </Paragraph>
+              <Tag data-color="success" data-size="sm" className="mt-2">{t('card.new')}</Tag>
+            </Card>
+
+            <Card 
+              data-color="neutral" 
+              className="p-6 cursor-pointer hover:shadow-lg transition-shadow border-2 border-purple-200"
+              onClick={() => setCurrentView('connections')}
+            >
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <Heading level={3} data-size="sm" className="mb-2">Direct Rights</Heading>
+              <Paragraph data-size="sm" className="text-gray-600">
+                Manage direct access rights given to persons and organizations.
               </Paragraph>
               <Tag data-color="success" data-size="sm" className="mt-2">{t('card.new')}</Tag>
             </Card>
@@ -515,6 +535,12 @@ console.log(roles);`}</pre>
               className={`hover:text-gray-300 transition-colors ${currentView === 'clientadmin' ? 'text-white font-semibold' : ''}`}
             >
               {t('header.clientAdmin')}
+            </button>
+            <button 
+              onClick={() => setCurrentView('connections')} 
+              className={`hover:text-gray-300 transition-colors ${currentView === 'connections' ? 'text-white font-semibold' : ''}`}
+            >
+              Direct Rights
             </button>
             <EnvironmentSelector />
             <LanguageSelector />
