@@ -9,11 +9,14 @@ export interface GetAuthorizedPartiesOptions {
   includeAccessPackages?: boolean;
   includeResources?: boolean;
   includeInstances?: boolean;
+  anyOfResourceIds?: string[];
 }
 
 export async function getAuthorizedParties(
   options: GetAuthorizedPartiesOptions = {}
 ): Promise<AuthorizedPartyExternal[]> {
+  console.log('getAuthorizedParties called with options:', options);
+  
   const params = new URLSearchParams();
   
   if (options.includeAltinn2 !== undefined) {
@@ -34,9 +37,16 @@ export async function getAuthorizedParties(
   if (options.includeInstances !== undefined) {
     params.append('includeInstances', options.includeInstances.toString());
   }
+  if (options.anyOfResourceIds && options.anyOfResourceIds.length > 0) {
+    for (const resourceId of options.anyOfResourceIds) {
+      params.append('anyOfResourceIds', resourceId);
+    }
+  }
 
   const queryString = params.toString();
   const url = queryString ? `${API_BASE}?${queryString}` : API_BASE;
+  
+  console.log('Fetching authorized parties from URL:', url);
 
   const response = await fetch(url);
   

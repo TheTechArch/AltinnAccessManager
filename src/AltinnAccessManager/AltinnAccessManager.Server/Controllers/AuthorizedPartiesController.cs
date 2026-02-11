@@ -46,9 +46,10 @@ public class AuthorizedPartiesController : ControllerBase
         [FromQuery] bool includeAccessPackages = false,
         [FromQuery] bool includeResources = false,
         [FromQuery] bool includeInstances = false,
-        [FromQuery] List<string>? anyOfResourceIds = null)
+        [FromQuery(Name = "anyOfResourceIds")] List<string>? anyOfResourceIds = null)
     {
-        _logger.LogInformation("Getting authorized parties for authenticated user");
+        _logger.LogInformation("Getting authorized parties for authenticated user. anyOfResourceIds: {ResourceIds}", 
+            anyOfResourceIds != null ? string.Join(", ", anyOfResourceIds) : "null");
 
         var altinnToken = GetAltinnToken();
         if (string.IsNullOrEmpty(altinnToken))

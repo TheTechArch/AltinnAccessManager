@@ -61,7 +61,9 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
     try {
       setLoadingParties(true);
       setPartiesError(null);
-      const parties = await getAuthorizedParties();
+      const parties = await getAuthorizedParties({
+        anyOfResourceIds: ['altinn_client_administration']
+      });
       // Flatten to include subunits
       const flattened = flattenAuthorizedParties(parties);
       // Filter out parties that are only hierarchy elements

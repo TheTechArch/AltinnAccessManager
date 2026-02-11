@@ -41,6 +41,10 @@ public class AuthorizedPartiesService : IAuthorizedPartiesService
         List<string>? anyOfResourceIds = null,
         string? altinnToken = null)
     {
+        _logger.LogInformation("GetAuthorizedPartiesAsync called. anyOfResourceIds count: {Count}, values: {Values}",
+            anyOfResourceIds?.Count ?? 0,
+            anyOfResourceIds != null ? string.Join(", ", anyOfResourceIds) : "null");
+            
         try
         {
             var queryParams = new List<string>
