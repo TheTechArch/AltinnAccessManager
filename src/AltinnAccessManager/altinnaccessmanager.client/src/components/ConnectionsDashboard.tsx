@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+ï»¿import { useState, useRef, useEffect } from 'react';
 import { Card, Heading, Paragraph, Button, Alert, Spinner } from '@digdir/designsystemet-react';
 import type { ConnectionDto, PersonInput } from '../types/connections';
 import type { AuthorizedPartyExternal } from '../types/authorizedParties';
@@ -466,12 +466,12 @@ export function ConnectionsDashboard({ isAuthenticated, onLogin }: ConnectionsDa
                     />
                   </div>
 
-                  <div className="text-center text-gray-500 text-sm">— OR lookup by person —</div>
+                  <div className="text-center text-gray-500 text-sm">ï¿½ OR lookup by person ï¿½</div>
 
                   {/* Person lookup */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Person Identifier (fødselsnummer)
+                      Person Identifier (fï¿½dselsnummer)
                     </label>
                     <input
                       type="text"
