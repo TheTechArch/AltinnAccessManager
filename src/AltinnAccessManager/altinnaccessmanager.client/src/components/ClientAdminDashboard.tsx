@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react';
-import { Card, Heading, Paragraph, Button, Textfield, Alert } from '@digdir/designsystemet-react';
+import { useState, useRef, useEffect } from 'react';
+import { Card, Heading, Paragraph, Button, Alert, Spinner } from '@digdir/designsystemet-react';
 import type { ClientDto, AgentDto } from '../types/clientAdmin';
+import type { AuthorizedPartyExternal } from '../types/authorizedParties';
 import { downloadDelegationsCsv, uploadDelegationsCsv, type ImportResult } from '../services/clientAdminApi';
+import { getAuthorizedParties, flattenAuthorizedParties } from '../services/authorizedPartiesApi';
 import { ClientsView } from './ClientsView';
 import { AgentsView } from './AgentsView';
 import { ClientDetails } from './ClientDetails';
@@ -17,7 +19,6 @@ interface ClientAdminDashboardProps {
 export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDashboardProps) {
   const [currentView, setCurrentView] = useState<DashboardView>('home');
   const [partyId, setPartyId] = useState<string>('');
-  const [tempPartyId, setTempPartyId] = useState<string>('');
   const [selectedClient, setSelectedClient] = useState<ClientDto | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<AgentDto | null>(null);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
@@ -26,12 +27,72 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
   const [uploadResult, setUploadResult] = useState<ImportResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Authorized parties state
+  const [authorizedParties, setAuthorizedParties] = useState<AuthorizedPartyExternal[]>([]);
+  const [loadingParties, setLoadingParties] = useState(false);
+  const [partiesError, setPartiesError] = useState<string | null>(null);
+  
+  // Search state for party dropdown
+  const [partySearchTerm, setPartySearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleSetParty = () => {
-    if (tempPartyId.trim()) {
-      setPartyId(tempPartyId.trim());
+  // Load authorized parties when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadAuthorizedParties();
+    }
+  }, [isAuthenticated]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const loadAuthorizedParties = async () => {
+    try {
+      setLoadingParties(true);
+      setPartiesError(null);
+      const parties = await getAuthorizedParties();
+      // Flatten to include subunits
+      const flattened = flattenAuthorizedParties(parties);
+      // Filter out parties that are only hierarchy elements
+      const filtered = flattened.filter(p => !p.onlyHierarchyElementWithNoAccess && !p.isDeleted);
+      setAuthorizedParties(filtered);
+    } catch (err) {
+      setPartiesError(err instanceof Error ? err.message : 'Failed to load authorized parties');
+    } finally {
+      setLoadingParties(false);
     }
   };
+
+  const handleSelectParty = (partyUuid: string) => {
+    setPartyId(partyUuid);
+    setIsDropdownOpen(false);
+    setPartySearchTerm('');
+  };
+
+  // Filter parties based on search term
+  const filteredParties = authorizedParties.filter(party => {
+    if (!partySearchTerm) return true;
+    const searchLower = partySearchTerm.toLowerCase();
+    const name = party.name?.toLowerCase() || '';
+    const orgNumber = party.organizationNumber?.toLowerCase() || '';
+    const personId = party.personId?.toLowerCase() || '';
+    const partyUuid = party.partyUuid?.toLowerCase() || '';
+    return name.includes(searchLower) || 
+           orgNumber.includes(searchLower) || 
+           personId.includes(searchLower) ||
+           partyUuid.includes(searchLower);
+  });
 
   const handleSelectClient = (client: ClientDto) => {
     setSelectedClient(client);
@@ -110,29 +171,110 @@ export function ClientAdminDashboard({ isAuthenticated, onLogin }: ClientAdminDa
         <div className="max-w-2xl mx-auto">
           <Heading level={2} data-size="lg" className="mb-4">Client Delegation Admin</Heading>
           <Paragraph className="text-gray-600 mb-6">
-            Enter your organization's party UUID to manage client delegations and agents.
+            Select an organization you can represent to manage client delegations and agents.
           </Paragraph>
           
-          <Card data-color="neutral" className="p-6">
+          {/* Authorized Parties Searchable Dropdown */}
+          <Card data-color="neutral" className="p-6" style={{ overflow: 'visible' }}>
             <Heading level={3} data-size="md" className="mb-4">Select Party</Heading>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Textfield
-                  label="Party UUID"
-                  value={tempPartyId}
-                  onChange={(e) => setTempPartyId(e.target.value)}
-                  placeholder="Enter your organization's party UUID..."
-                />
+            
+            
+            {loadingParties ? (
+              <div className="flex items-center gap-3 py-4">
+                <Spinner aria-label="Loading authorized parties..." />
+                <Paragraph>Loading parties you can represent...</Paragraph>
               </div>
-              <div className="flex items-end">
-                <Button onClick={handleSetParty} disabled={!tempPartyId.trim()}>
-                  Continue
+            ) : partiesError ? (
+              <Alert data-color="warning" className="mb-4">
+                <Paragraph>{partiesError}</Paragraph>
+                <Button variant="tertiary" data-size="sm" onClick={loadAuthorizedParties} className="mt-2">
+                  Try Again
                 </Button>
+              </Alert>
+            ) : authorizedParties.length > 0 ? (
+              <div ref={dropdownRef} className="relative" style={{ zIndex: 100 }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search and select organization ({authorizedParties.length} available)
+                </label>
+                
+                {/* Search Input */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Type to search by name, org number, or UUID..."
+                    value={partySearchTerm}
+                    onChange={(e) => {
+                      setPartySearchTerm(e.target.value);
+                      setIsDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsDropdownOpen(true)}
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Dropdown Results */}
+                {isDropdownOpen && (
+                  <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto" style={{ zIndex: 9999 }}>
+                    {filteredParties.length === 0 ? (
+                      <div className="px-4 py-3 text-gray-500 text-sm">
+                        No parties match your search
+                      </div>
+                    ) : (
+                      filteredParties.map((party) => (
+                        <button
+                          key={party.partyUuid}
+                          className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors"
+                          onClick={() => handleSelectParty(party.partyUuid)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-gray-900 truncate">
+                                {party.name || 'Unknown'}
+                              </div>
+                              <div className="text-sm text-gray-500 flex items-center gap-2">
+                                {party.organizationNumber && (
+                                  <span>Org: {party.organizationNumber}</span>
+                                )}
+                                {party.personId && (
+                                  <span>Person: {party.personId.substring(0, 6)}***</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="ml-2 flex-shrink-0">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                party.type === 'Organization' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : party.type === 'Person'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {party.type}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                <Paragraph data-size="sm" className="text-gray-500 mt-3">
+                  {filteredParties.length === authorizedParties.length 
+                    ? `Showing all ${authorizedParties.length} parties`
+                    : `Showing ${filteredParties.length} of ${authorizedParties.length} parties`
+                  }
+                </Paragraph>
               </div>
-            </div>
-            <Paragraph data-size="sm" className="text-gray-500 mt-4">
-              The party UUID identifies your organization in Altinn. You can find this in your organization's Altinn profile.
-            </Paragraph>
+            ) : (
+              <Alert data-color="info">
+                <Paragraph>No authorized parties found. Please contact your administrator.</Paragraph>
+              </Alert>
+            )}
           </Card>
         </div>
       </div>
